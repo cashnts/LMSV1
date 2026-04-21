@@ -1,0 +1,73 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
+
+@Injectable()
+export class CoursesService {
+  async listPublished(supabase: SupabaseClient) {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, org_id, title, description, published, thumbnail_url, created_at')
+      .eq('published', true)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async list(supabase: SupabaseClient, orgId: string) {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async get(supabase: SupabaseClient, id: string) {
+    const { data, error } = await supabase.from('courses').select('*').eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new NotFoundException('Course not found');
+    return data;
+  }
+
+  async create(supabase: SupabaseClient, dto: CreateCourseDto) {
+    const { data, error } = await supabase
+      .from('courses')
+      .insert({
+        org_id: dto.orgId,
+        title: dto.title,
+        description: dto.description ?? '',
+        published: dto.published ?? false,
+        thumbnail_url: dto.thumbnailUrl ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async update(supabase: SupabaseClient, id: string, dto: UpdateCourseDto) {
+    const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (dto.title !== undefined) payload.title = dto.title;
+    if (dto.description !== undefined) payload.description = dto.description;
+    if (dto.published !== undefined) payload.published = dto.published;
+    if (dto.thumbnailUrl !== undefined) payload.thumbnail_url = dto.thumbnailUrl || null;
+    const { data, error } = await supabase
+      .from('courses')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    if (!data) throw new NotFoundException('Course not found');
+    return data;
+  }
+
+  async remove(supabase: SupabaseClient, id: string) {
+    const { error } = await supabase.from('courses').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  }
+}
