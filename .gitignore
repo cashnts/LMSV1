@@ -1,6 +1,7 @@
 node_modules
 .next
 .next*
+.next_*
 dist
 .turbo
 .env
@@ -10,3 +11,4 @@ dist
 .DS_Store
 supabase/.branches
 supabase/.temp
+.ai

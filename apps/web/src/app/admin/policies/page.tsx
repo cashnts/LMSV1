@@ -20,6 +20,7 @@ export default async function AdminPoliciesPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <AdminSettingsForm
+          appName={adminSettings.creationSettings.appName}
           organizationCreationMode={adminSettings.creationSettings.organizationCreationMode}
           courseCreationMode={adminSettings.creationSettings.courseCreationMode}
         />

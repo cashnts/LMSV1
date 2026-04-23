@@ -17,6 +17,7 @@ export type OrganizationCreationMode = (typeof ORGANIZATION_CREATION_MODES)[numb
 export type CourseCreationMode = (typeof COURSE_CREATION_MODES)[number];
 
 export type CreationSettings = {
+  appName: string;
   organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
   updatedAt: string | null;
@@ -67,6 +68,7 @@ export class AdminService {
 
   private defaultSettings(): CreationSettings {
     return {
+      appName: 'LMS',
       organizationCreationMode: 'app_admin',
       courseCreationMode: 'app_admin',
       updatedAt: null,
@@ -258,7 +260,7 @@ export class AdminService {
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase
       .from('app_config')
-      .select('organization_creation_mode, course_creation_mode, updated_at')
+      .select('app_name, organization_creation_mode, course_creation_mode, updated_at')
       .eq('id', true)
       .maybeSingle();
 
@@ -272,6 +274,7 @@ export class AdminService {
     if (!data) return this.defaultSettings();
 
     return {
+      appName: data.app_name as string,
       organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
       updatedAt: data.updated_at ?? null,
@@ -279,6 +282,7 @@ export class AdminService {
   }
 
   async updateCreationSettings(settings: {
+    appName: string;
     organizationCreationMode: OrganizationCreationMode;
     courseCreationMode: CourseCreationMode;
   }) {
@@ -288,13 +292,14 @@ export class AdminService {
       .upsert(
         {
           id: true,
+          app_name: settings.appName,
           organization_creation_mode: settings.organizationCreationMode,
           course_creation_mode: settings.courseCreationMode,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' },
       )
-      .select('organization_creation_mode, course_creation_mode, updated_at')
+      .select('app_name, organization_creation_mode, course_creation_mode, updated_at')
       .single();
 
     if (error) {
@@ -306,6 +311,7 @@ export class AdminService {
     }
 
     return {
+      appName: data.app_name as string,
       organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
       updatedAt: data.updated_at ?? null,

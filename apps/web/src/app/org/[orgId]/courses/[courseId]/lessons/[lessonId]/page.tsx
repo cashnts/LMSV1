@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LessonEditorForm } from '@/components/lessons/lesson-editor-form';
 import { LessonAssetUpload } from '@/components/lessons/lesson-asset-upload';
 import { LessonAssetsGallery, type LessonAsset } from '@/components/lessons/lesson-assets-gallery';
+import { LessonVideoUrlForm } from '@/components/lessons/lesson-video-url-form';
 
 type Lesson = {
   id: string;
@@ -46,30 +47,46 @@ export default async function LessonPage({
         <h1 className="text-2xl font-semibold tracking-tight mt-2">{lesson.title}</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lesson content</CardTitle>
-          <CardDescription>Markdown body shown to learners.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LessonEditorForm lessonId={lessonId} initialTitle={lesson.title} initialMd={lesson.content_md ?? ''} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="lg:col-span-7 space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lesson content</CardTitle>
+              <CardDescription>Markdown body shown to learners.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LessonEditorForm lessonId={lessonId} initialTitle={lesson.title} initialMd={lesson.content_md ?? ''} />
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Attachments</CardTitle>
-          <CardDescription>Upload videos, pictures, and files for this lesson.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-3">
-            <LessonAssetUpload lessonId={lessonId} kind="video" />
-            <LessonAssetUpload lessonId={lessonId} kind="image" />
-            <LessonAssetUpload lessonId={lessonId} kind="file" />
-          </div>
-          <LessonAssetsGallery assets={assets} />
-        </CardContent>
-      </Card>
+        <div className="lg:col-span-5 space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Attachments</CardTitle>
+              <CardDescription>Upload videos, pictures, and files for this lesson.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                <LessonAssetUpload lessonId={lessonId} kind="video" />
+                <LessonAssetUpload lessonId={lessonId} kind="image" />
+                <LessonAssetUpload lessonId={lessonId} kind="file" />
+              </div>
+              <LessonAssetsGallery assets={assets} canDelete={true} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Add video by URL</CardTitle>
+              <CardDescription>Paste a Bunny.net embed or HLS URL to link a video without re-uploading.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LessonVideoUrlForm lessonId={lessonId} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

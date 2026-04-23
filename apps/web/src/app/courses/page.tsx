@@ -27,7 +27,7 @@ export default async function CoursesPage() {
 
   let orgs: OrgRow[] = [];
   try {
-    orgs = await apiFetch<OrgRow[]>('/organizations', accessToken);
+    orgs = await apiFetch<OrgRow[]>('/organization', accessToken);
   } catch {
     orgs = [];
   }

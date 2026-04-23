@@ -9,14 +9,19 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import type { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CreateAssetDto } from './dto/create-asset.dto';
+import { AddAssetUrlDto } from './dto/add-asset-url.dto';
 
 @Controller('lessons')
 @UseGuards(SupabaseAuthGuard)
@@ -35,8 +40,35 @@ export class LessonsController {
   }
 
   @Post(':id/assets/upload')
-  signedUpload(@Req() req: Request, @Param('id') id: string, @Body() dto: CreateAssetDto) {
-    return this.lessons.createSignedUpload(req.supabase!, id, dto);
+  uploadIntent(@Req() req: Request, @Param('id') id: string, @Body() dto: CreateAssetDto) {
+    return this.lessons.createUploadIntent(req.supabase!, id, dto);
+  }
+
+  @Post(':id/assets/url')
+  addAssetUrl(@Req() req: Request, @Param('id') id: string, @Body() dto: AddAssetUrlDto) {
+    return this.lessons.addAssetUrl(req.supabase!, id, dto);
+  }
+
+  // Receives file from browser and proxies it to Bunny Storage (images/files)
+  @Post('assets/:assetId/upload-file')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } }))
+  uploadFileToBunny(
+    @Req() req: Request,
+    @Param('assetId') assetId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('file field required');
+    return this.lessons.uploadFileToBunny(req.supabase!, assetId, file);
+  }
+
+  @Patch('assets/:assetId')
+  confirmAsset(
+    @Req() req: Request,
+    @Param('assetId') assetId: string,
+    @Body() body: { bytes: number },
+  ) {
+    if (typeof body.bytes !== 'number') throw new BadRequestException('bytes required');
+    return this.lessons.confirmAssetUpload(req.supabase!, assetId, body.bytes);
   }
 
   @Delete('assets/:assetId')

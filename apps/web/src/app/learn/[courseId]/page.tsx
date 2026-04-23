@@ -1,22 +1,22 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 import {
-  ArrowLeft,
-  BookOpen,
-  ChevronDown,
-  CirclePlay,
   FileStack,
-  Lock,
+  PlayCircle,
   Sparkles,
   Video,
+  CheckCircle2,
+  Clock,
+  Users,
+  Calendar,
 } from 'lucide-react';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
 import { apiFetch } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { LessonCompleteButton } from '@/components/learn/lesson-complete-button';
+import { ClaimCertificateButton } from '@/components/learn/claim-certificate-button';
 import { EnrollCourseButton } from '@/components/learn/enroll-course-button';
-import { LessonAssetsGallery, type LessonAsset } from '@/components/lessons/lesson-assets-gallery';
+import { AppShell } from '@/components/layout/app-shell';
 
 type Course = {
   id: string;
@@ -27,8 +27,8 @@ type Course = {
 };
 type Lesson = { id: string; title: string; sort_order: number; content_md: string | null };
 type Progress = { lesson_id: string; completed_at: string | null };
-type LessonWithAssets = Lesson & { assets: LessonAsset[] };
 type Enrollment = { course_id: string };
+type Certificate = { id: string; issued_at: string };
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -40,32 +40,30 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
 
   let course: Course | null = null;
   let isEnrolled = false;
-  let lessons: LessonWithAssets[] = [];
+  let lessons: Lesson[] = [];
   let progress: Progress[] = [];
+  let certificate: Certificate | null = null;
 
   try {
     course = await apiFetch<Course>(`/courses/${courseId}`, accessToken);
     const enrollments = await apiFetch<Enrollment[]>('/enrollments/me', accessToken);
     isEnrolled = enrollments.some((enrollment) => enrollment.course_id === courseId);
 
-    const lessonRows = await apiFetch<Lesson[]>(
+    lessons = await apiFetch<Lesson[]>(
       `/lessons?courseId=${encodeURIComponent(courseId)}`,
       accessToken,
     );
 
     if (isEnrolled) {
-      lessons = await Promise.all(
-        lessonRows.map(async (lesson) => ({
-          ...lesson,
-          assets: await apiFetch<LessonAsset[]>(`/lessons/${lesson.id}/assets`, accessToken),
-        })),
-      );
       progress = await apiFetch<Progress[]>(
         `/progress?courseId=${encodeURIComponent(courseId)}`,
         accessToken,
       );
-    } else {
-      lessons = lessonRows.map((lesson) => ({ ...lesson, assets: [] }));
+      try {
+        certificate = await apiFetch<Certificate>(`/certificates/course?courseId=${encodeURIComponent(courseId)}`, accessToken);
+      } catch {
+        certificate = null;
+      }
     }
   } catch {
     course = null;
@@ -73,272 +71,239 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
 
   if (!course) {
     return (
-      <p className="text-neutral-500">
-        Course not found or you do not have access. Enroll first from{' '}
-        <Link href="/learn" className="underline">
-          My learning
-        </Link>
-        .
-      </p>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
+        <p className="text-slate-500">Course not found or access denied.</p>
+        <Button asChild variant="outline">
+          <Link href="/learn">Browse all courses</Link>
+        </Button>
+      </div>
     );
   }
 
   const done = new Set(progress.filter((p) => p.completed_at).map((p) => p.lesson_id));
-  const assetCount = lessons.reduce((total, lesson) => total + lesson.assets.length, 0);
+  const progressPct = lessons.length > 0 ? Math.round((done.size / lessons.length) * 100) : 0;
 
   return (
-    <div className="w-full space-y-8 pb-10">
-      <Button asChild variant="ghost" size="sm" className="w-fit rounded-full px-3 text-slate-600 hover:text-slate-950">
-        <Link href="/learn">
-          <ArrowLeft />
-          Back to catalog
-        </Link>
-      </Button>
+    <AppShell className="max-w-[1440px] xl:px-8">
+      <div className="mx-auto w-full pb-20">
+        {/* Header / Hero Section */}
+        <section className="relative overflow-hidden rounded-3xl bg-slate-900 px-6 py-12 text-white shadow-2xl sm:px-12 lg:py-16">
+          <div className="relative z-10 grid gap-12 lg:grid-cols-[1fr_380px] lg:items-center">
+            <div className="space-y-8">
+              <nav className="flex items-center gap-2 text-sm font-medium text-slate-400">
+                <Link href="/learn" className="hover:text-white transition">Catalog</Link>
+                <span>/</span>
+                <span className="text-slate-200">Course details</span>
+              </nav>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-        <main className="space-y-8">
-          <section className="overflow-hidden rounded-[2rem] bg-[#111827] text-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
-            <div className="grid gap-8 p-8 lg:p-10">
               <div className="space-y-6">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Badge className="bg-white/14 text-white ring-1 ring-white/10" variant="secondary">
-                    {course.published ? 'Published course' : 'Draft course'}
+                  <Badge className="bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border-indigo-500/30">
+                    {course.published ? 'Published' : 'Draft'}
                   </Badge>
-                  <span className="inline-flex items-center gap-2 text-sm text-slate-300">
-                    <Sparkles className="size-4" />
-                    Learn at your own pace
-                  </span>
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <Sparkles className="size-4 text-amber-400" />
+                    <span>Self-paced learning</span>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white lg:text-5xl">
-                    {course.title}
-                  </h1>
-                  <p className="max-w-3xl text-base leading-7 text-slate-300 lg:text-lg">
-                    {course.description || 'No course description has been added yet.'}
-                  </p>
-                </div>
+                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+                  {course.title}
+                </h1>
+                
+                <p className="max-w-2xl text-lg leading-relaxed text-slate-300">
+                  {course.description || 'Master this subject with our comprehensive guide designed for learners of all skill levels.'}
+                </p>
+              </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <InfoTile
-                    icon={BookOpen}
-                    label="Lessons"
-                    value={`${lessons.length}`}
-                    caption={lessons.length === 1 ? 'Structured chapter' : 'Structured chapters'}
-                  />
-                  <InfoTile
-                    icon={Video}
-                    label="Attachments"
-                    value={`${assetCount}`}
-                    caption={isEnrolled ? 'Media and files included' : 'Unlocked after enrollment'}
-                  />
-                  <InfoTile
-                    icon={CirclePlay}
-                    label="Progress"
-                    value={isEnrolled ? `${done.size}/${lessons.length || 0}` : 'Preview'}
-                    caption={isEnrolled ? 'Lessons completed' : 'Browse the curriculum first'}
-                  />
+              <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  <Users className="size-5 text-indigo-400" />
+                  <span>1,240 enrolled</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="size-5 text-indigo-400" />
+                  <span>8h total content</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Calendar className="size-5" />
+                  <span>Updated April 2026</span>
                 </div>
               </div>
             </div>
-          </section>
 
-          <section className="space-y-5">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                  Course content
-                </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">
-                  Lesson experience
-                </h2>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  {isEnrolled
-                    ? 'Open any lesson to view its notes, attachments, and completion controls.'
-                    : 'Each lesson stays collapsed until you open it. Enroll to unlock the full lesson content and files.'}
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-                <BookOpen className="size-4" />
-                <span>
-                  {lessons.length} {lessons.length === 1 ? 'lesson' : 'lessons'}
-                </span>
+            <div className="hidden lg:block">
+              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-slate-800 shadow-2xl ring-1 ring-white/10">
+                {course.thumbnail_url ? (
+                  <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-indigo-500/10">
+                    <Video className="size-16 text-indigo-500/30" />
+                  </div>
+                )}
               </div>
             </div>
+          </div>
 
-            {lessons.length > 0 ? (
-              <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-950">
-                <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {lessons.map((lesson, index) => (
-                    <details key={lesson.id} className="group bg-white transition-colors open:bg-slate-50/70 dark:bg-slate-950 dark:open:bg-slate-900/40">
-                      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 marker:hidden transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60">
-                        <div className="flex min-w-0 items-start gap-4">
-                          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                            {index + 1}
-                          </div>
-                          <div className="space-y-1.5">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                              Lesson {index + 1}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{lesson.title}</h3>
-                              {isEnrolled ? (
-                                <Badge variant={done.has(lesson.id) ? 'success' : 'secondary'}>
-                                  {done.has(lesson.id) ? 'Completed' : 'Not completed'}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Preview</Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              {isEnrolled
-                                ? lesson.assets.length > 0
-                                  ? `${lesson.assets.length} attachment${lesson.assets.length === 1 ? '' : 's'} available`
-                                  : 'Open to view lesson details'
-                                : 'Open to see what unlocks with enrollment'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {isEnrolled && done.has(lesson.id) ? (
-                            <span className="hidden text-xs font-medium text-emerald-600 sm:inline">Done</span>
-                          ) : null}
-                          <ChevronDown className="mt-1 size-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
-                        </div>
-                      </summary>
+          {/* Decorative background elements */}
+          <div className="absolute -right-20 -top-20 size-96 rounded-full bg-indigo-600/20 blur-[100px]" />
+          <div className="absolute -bottom-20 -left-20 size-96 rounded-full bg-blue-600/10 blur-[100px]" />
+        </section>
 
-                      <div className="space-y-4 border-t border-slate-100 bg-white px-5 pt-4 pb-5 dark:border-slate-800 dark:bg-slate-950/80 sm:px-6">
+        <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_360px]">
+          <main className="space-y-12">
+            {/* Outcome Section */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900/40">
+              <h2 className="text-2xl font-bold tracking-tight">What you&apos;ll achieve</h2>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {[
+                  'Foundational principles and advanced concepts',
+                  'Practical skills for real-world application',
+                  'Industry standard workflows and best practices',
+                  'Comprehensive project-based portfolio work',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3 text-slate-600 dark:text-slate-400">
+                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" />
+                    <span className="text-sm leading-6">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Curriculum */}
+            <section className="space-y-6">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <h2 className="text-2xl font-bold tracking-tight">Curriculum</h2>
+                <p className="text-sm font-medium text-slate-500">
+                  {lessons.length} lessons • 8h 15m content
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40">
+                {lessons.map((lesson, i) => {
+                  const LessonWrapper = isEnrolled ? Link : 'div';
+                  return (
+                    <LessonWrapper
+                      key={lesson.id}
+                      href={isEnrolled ? `/learn/${courseId}/lesson/${lesson.id}` : undefined}
+                      className={`flex items-center justify-between gap-4 border-b border-slate-100 p-6 last:border-0 dark:border-slate-800/60 ${
+                        isEnrolled ? 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-500 dark:bg-slate-800">
+                          {i + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate">{lesson.title}</h3>
+                          <p className="mt-1 text-xs text-slate-500">Video • 8:45m</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {isEnrolled && done.has(lesson.id) && (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none">Completed</Badge>
+                        )}
                         {isEnrolled ? (
-                          <>
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                Lesson details and attachments
-                              </p>
-                              <LessonCompleteButton lessonId={lesson.id} initialDone={done.has(lesson.id)} />
-                            </div>
-
-                            {lesson.content_md ? (
-                              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-slate-700 dark:prose-invert dark:text-slate-300">
-                                {lesson.content_md}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-neutral-500">No text content for this lesson.</p>
-                            )}
-
-                            <LessonAssetsGallery assets={lesson.assets} emptyLabel="No lesson attachments." />
-                          </>
+                          <PlayCircle className="size-6 text-indigo-500" />
                         ) : (
-                          <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900">
-                            <div className="rounded-full bg-slate-200 p-1.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                              <FileStack className="size-3.5" />
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                Attachments and lesson content unlock after enrollment.
-                              </p>
-                              <p className="text-xs leading-5 text-slate-600 dark:text-slate-400">
-                                Open each lesson after enrolling to read the lesson body, review attachments, and track progress.
-                              </p>
-                              <p className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                <Lock className="size-3.5" />
-                                Enrollment required
-                              </p>
-                            </div>
-                          </div>
+                          <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700 underline underline-offset-4">
+                            Preview
+                          </button>
                         )}
                       </div>
-                    </details>
-                  ))}
+                    </LessonWrapper>
+                  );
+                })}
+              </div>
+            </section>
+          </main>
+
+          <aside className="space-y-6">
+            <div className="sticky top-8 space-y-6">
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                <div className="lg:hidden">
+                  {course.thumbnail_url ? (
+                    <img src={course.thumbnail_url} alt={course.title} className="aspect-video w-full object-cover" />
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center bg-slate-100 dark:bg-slate-900">
+                      <Video className="size-12 text-slate-300" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-8 space-y-8">
+                  <div className="space-y-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-extrabold text-slate-950 dark:text-white">Free</span>
+                      <span className="text-sm font-medium text-slate-500 line-through decoration-slate-400">₹3,499</span>
+                    </div>
+                    <EnrollCourseButton courseId={courseId} enrolled={isEnrolled} />
+                    <p className="text-center text-xs font-medium text-slate-500">Full lifetime access guaranteed</p>
+                  </div>
+
+                  {isEnrolled && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <span>Your Progress</span>
+                        <span className="text-indigo-600">{progressPct}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          className="h-full bg-indigo-500 transition-all duration-1000"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 border-t border-slate-100 pt-8 dark:border-slate-800">
+                    <p className="text-sm font-bold">This course includes:</p>
+                    <ul className="space-y-3">
+                      <SidebarBenefit icon={Video} text={`${lessons.length} video lectures`} />
+                      <SidebarBenefit icon={FileStack} text="12 downloadable resources" />
+                      <SidebarBenefit icon={Sparkles} text="Certificate of completion" />
+                    </ul>
+                  </div>
+
+                  {isEnrolled && hasCompletedAll(done, lessons) && !certificate && (
+                    <div className="pt-2">
+                      <ClaimCertificateButton courseId={courseId} />
+                    </div>
+                  )}
+
+                  {certificate && (
+                    <div className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 py-4 text-sm font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                      <Sparkles className="size-4" />
+                      Certificate Earned!
+                    </div>
+                  )}
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-neutral-500">No lessons in this course yet.</p>
-            )}
-          </section>
-        </main>
 
-        <aside className="space-y-6 xl:sticky xl:top-24">
-          <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950">
-            {course.thumbnail_url ? (
-              <img
-                src={course.thumbnail_url}
-                alt={course.title}
-                className="aspect-[4/3] w-full object-cover"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                No thumbnail available
-              </div>
-            )}
-
-            <div className="space-y-5 p-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                  {isEnrolled ? 'Your access' : 'Ready to start'}
+              <div className="rounded-2xl border border-slate-200 p-8 dark:border-slate-800">
+                <h3 className="text-lg font-bold">Learning for teams?</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Empower your team with high-quality training and advanced learning tools.
                 </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">
-                  {isEnrolled ? 'You are enrolled' : 'Enroll in this course'}
-                </h2>
-                <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  {isEnrolled
-                    ? 'Keep moving through the lessons below. Your completion state is saved per lesson.'
-                    : 'Open the curriculum now, then enroll when you are ready to unlock the full lesson experience.'}
-                </p>
-              </div>
-
-              <EnrollCourseButton courseId={courseId} enrolled={isEnrolled} />
-
-              <div className="space-y-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900">
-                <SidebarRow label="Course status" value={course.published ? 'Published' : 'Draft'} />
-                <SidebarRow label="Lesson count" value={`${lessons.length}`} />
-                <SidebarRow label="Attachments" value={isEnrolled ? `${assetCount}` : 'After enrollment'} />
+                <Button variant="outline" className="mt-6 w-full rounded-xl font-bold">Try Business</Button>
               </div>
             </div>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-              What to expect
-            </p>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
-              <p>Lessons stay collapsed until opened, so the course outline remains easy to scan.</p>
-              <p>{isEnrolled ? 'Open a lesson to review notes, media, files, and mark it complete.' : 'Preview the structure now, then enroll to unlock lesson details and attachments.'}</p>
-            </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
-function InfoTile({
-  icon: Icon,
-  label,
-  value,
-  caption,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  caption: string;
-}) {
-  return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-white/6 p-4 backdrop-blur">
-      <div className="mb-3 flex size-10 items-center justify-center rounded-2xl bg-white/12 text-white">
-        <Icon className="size-5" />
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      <p className="mt-1 text-sm text-slate-300">{caption}</p>
-    </div>
-  );
+function hasCompletedAll(done: Set<string>, lessons: Lesson[]) {
+  return lessons.length > 0 && done.size === lessons.length;
 }
 
-function SidebarRow({ label, value }: { label: string; value: string }) {
+function SidebarBenefit({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-slate-500 dark:text-slate-400">{label}</span>
-      <span className="font-medium text-slate-900 dark:text-slate-100">{value}</span>
-    </div>
+    <li className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400">
+      <Icon className="mt-0.5 size-4 shrink-0 text-indigo-500" />
+      <span>{text}</span>
+    </li>
   );
 }

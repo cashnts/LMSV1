@@ -21,7 +21,7 @@ export default async function OrganizationsPage() {
 
   let orgs: OrgRow[] = [];
   try {
-    orgs = await apiFetch<OrgRow[]>('/organizations', accessToken);
+    orgs = await apiFetch<OrgRow[]>('/organization', accessToken);
   } catch {
     orgs = [];
   }

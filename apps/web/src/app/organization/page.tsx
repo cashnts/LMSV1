@@ -1,0 +1,1 @@
+export { default, dynamic } from '../organizations/page';

@@ -12,18 +12,19 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type Props = {
+  appName: string;
   isAppAdmin: boolean;
   needsAdminSetup: boolean;
 };
 
-export function SiteHeader({ isAppAdmin, needsAdminSetup }: Props) {
+export function SiteHeader({ appName, isAppAdmin, needsAdminSetup }: Props) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
     { href: '/dashboard', label: 'Home' },
     { href: '/courses', label: 'Courses' },
-    { href: '/organizations', label: 'Organizations' },
+    { href: '/organization', label: 'Organizations' },
     { href: '/learn', label: 'Learn' },
     ...((isAppAdmin || needsAdminSetup) ? [{ href: '/admin', label: needsAdminSetup ? 'Setup' : 'Admin' }] : []),
   ];
@@ -36,7 +37,7 @@ export function SiteHeader({ isAppAdmin, needsAdminSetup }: Props) {
             href="/"
             className="text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-50"
           >
-            LMS
+            {appName}
           </Link>
 
           <Show when="signed-in">

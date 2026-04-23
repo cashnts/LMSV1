@@ -5,7 +5,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AdminService } from '../admin/admin.service';
 import { CreateOrgDto } from './dto/create-org.dto';
 
-@Controller('organizations')
+@Controller(['organization', 'organizations'])
 @UseGuards(SupabaseAuthGuard)
 export class OrganizationsController {
   constructor(

@@ -42,8 +42,8 @@ export function EnrollCourseButton({
   }
 
   return (
-    <div className="space-y-2">
-      <Button type="button" onClick={enroll} disabled={loading || enrolled}>
+    <div className="space-y-2 w-full">
+      <Button className="w-full" type="button" onClick={enroll} disabled={loading || enrolled}>
         {enrolled ? 'Enrolled' : loading ? 'Enrolling…' : 'Enroll now'}
       </Button>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

@@ -10,13 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 
 type Props = {
+  appName: string;
   organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
 };
 
-export function AdminSettingsForm({ organizationCreationMode, courseCreationMode }: Props) {
+export function AdminSettingsForm({ appName, organizationCreationMode, courseCreationMode }: Props) {
   const router = useRouter();
   const { getAccessToken } = useSupabaseAccessToken();
+  const [appNameState, setAppNameState] = useState(appName);
   const [orgMode, setOrgMode] = useState<OrganizationCreationMode>(organizationCreationMode);
   const [courseMode, setCourseMode] = useState<CourseCreationMode>(courseCreationMode);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,7 @@ export function AdminSettingsForm({ organizationCreationMode, courseCreationMode
       await apiFetch('/admin/settings', accessToken, {
         method: 'PATCH',
         body: JSON.stringify({
+          appName: appNameState,
           organizationCreationMode: orgMode,
           courseCreationMode: courseMode,
         }),
@@ -53,11 +56,23 @@ export function AdminSettingsForm({ organizationCreationMode, courseCreationMode
   return (
     <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <CardHeader>
-        <CardTitle className="text-xl">Creation controls</CardTitle>
-        <CardDescription>Choose whether app admins own provisioning or whether staff can self-serve.</CardDescription>
+        <CardTitle className="text-xl">Settings</CardTitle>
+        <CardDescription>Configure app details and choose whether app admins own provisioning or whether staff can self-serve.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="app-name">App name</Label>
+            <input
+              id="app-name"
+              type="text"
+              value={appNameState}
+              onChange={(event) => setAppNameState(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-950"
+              required
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="org-mode">Organization creation</Label>
             <select

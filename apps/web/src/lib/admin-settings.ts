@@ -2,6 +2,7 @@ export type OrganizationCreationMode = 'app_admin' | 'authenticated';
 export type CourseCreationMode = 'app_admin' | 'org_staff';
 
 export type CreationSettings = {
+  appName: string;
   organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
   updatedAt: string | null;
