@@ -20,6 +20,16 @@ export type CreationSettings = {
   appName: string;
   organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
+  bunnyStorageZone: string;
+  bunnyStorageAccessKey: string;
+  bunnyStorageCdnUrl: string;
+  bunnyStorageRegion: string;
+  supportEmail: string;
+  brandColor: string;
+  customHeadScripts: string;
+  stripePublicKey: string;
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
   updatedAt: string | null;
 };
 
@@ -71,6 +81,16 @@ export class AdminService {
       appName: 'LMS',
       organizationCreationMode: 'app_admin',
       courseCreationMode: 'app_admin',
+      bunnyStorageZone: '',
+      bunnyStorageAccessKey: '',
+      bunnyStorageCdnUrl: '',
+      bunnyStorageRegion: 'ny',
+      supportEmail: '',
+      brandColor: '#4f46e5',
+      customHeadScripts: '',
+      stripePublicKey: '',
+      stripeSecretKey: '',
+      stripeWebhookSecret: '',
       updatedAt: null,
     };
   }
@@ -260,7 +280,7 @@ export class AdminService {
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase
       .from('app_config')
-      .select('app_name, organization_creation_mode, course_creation_mode, updated_at')
+      .select('app_name, organization_creation_mode, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
       .eq('id', true)
       .maybeSingle();
 
@@ -277,6 +297,16 @@ export class AdminService {
       appName: data.app_name as string,
       organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
+      bunnyStorageZone: data.bunny_storage_zone ?? '',
+      bunnyStorageAccessKey: data.bunny_storage_access_key ?? '',
+      bunnyStorageCdnUrl: data.bunny_storage_cdn_url ?? '',
+      bunnyStorageRegion: data.bunny_storage_region ?? 'ny',
+      supportEmail: data.support_email ?? '',
+      brandColor: data.brand_color ?? '#4f46e5',
+      customHeadScripts: data.custom_head_scripts ?? '',
+      stripePublicKey: data.stripe_public_key ?? '',
+      stripeSecretKey: data.stripe_secret_key ?? '',
+      stripeWebhookSecret: data.stripe_webhook_secret ?? '',
       updatedAt: data.updated_at ?? null,
     };
   }
@@ -285,6 +315,16 @@ export class AdminService {
     appName: string;
     organizationCreationMode: OrganizationCreationMode;
     courseCreationMode: CourseCreationMode;
+    bunnyStorageZone: string;
+    bunnyStorageAccessKey: string;
+    bunnyStorageCdnUrl: string;
+    bunnyStorageRegion: string;
+    supportEmail: string;
+    brandColor: string;
+    customHeadScripts: string;
+    stripePublicKey: string;
+    stripeSecretKey: string;
+    stripeWebhookSecret: string;
   }) {
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase
@@ -295,11 +335,21 @@ export class AdminService {
           app_name: settings.appName,
           organization_creation_mode: settings.organizationCreationMode,
           course_creation_mode: settings.courseCreationMode,
+          bunny_storage_zone: settings.bunnyStorageZone,
+          bunny_storage_access_key: settings.bunnyStorageAccessKey,
+          bunny_storage_cdn_url: settings.bunnyStorageCdnUrl,
+          bunny_storage_region: settings.bunnyStorageRegion,
+          support_email: settings.supportEmail,
+          brand_color: settings.brandColor,
+          custom_head_scripts: settings.customHeadScripts,
+          stripe_public_key: settings.stripePublicKey,
+          stripe_secret_key: settings.stripeSecretKey,
+          stripe_webhook_secret: settings.stripeWebhookSecret,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' },
       )
-      .select('app_name, organization_creation_mode, course_creation_mode, updated_at')
+      .select('app_name, organization_creation_mode, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
       .single();
 
     if (error) {
@@ -314,6 +364,16 @@ export class AdminService {
       appName: data.app_name as string,
       organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
+      bunnyStorageZone: data.bunny_storage_zone ?? '',
+      bunnyStorageAccessKey: data.bunny_storage_access_key ?? '',
+      bunnyStorageCdnUrl: data.bunny_storage_cdn_url ?? '',
+      bunnyStorageRegion: data.bunny_storage_region ?? 'ny',
+      supportEmail: data.support_email ?? '',
+      brandColor: data.brand_color ?? '#4f46e5',
+      customHeadScripts: data.custom_head_scripts ?? '',
+      stripePublicKey: data.stripe_public_key ?? '',
+      stripeSecretKey: data.stripe_secret_key ?? '',
+      stripeWebhookSecret: data.stripe_webhook_secret ?? '',
       updatedAt: data.updated_at ?? null,
     } satisfies CreationSettings;
   }

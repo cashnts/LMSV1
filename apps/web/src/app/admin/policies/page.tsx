@@ -12,27 +12,37 @@ export default async function AdminPoliciesPage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Policies</p>
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Creation policies</h2>
+        <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Global settings</h2>
         <p className="max-w-2xl text-sm leading-6 text-slate-500">
-          Control who can create organizations and where course creation is allowed.
+          Control platform-wide configuration, infrastructure, and access policies.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-6">
         <AdminSettingsForm
           appName={adminSettings.creationSettings.appName}
           organizationCreationMode={adminSettings.creationSettings.organizationCreationMode}
           courseCreationMode={adminSettings.creationSettings.courseCreationMode}
+          bunnyStorageZone={adminSettings.creationSettings.bunnyStorageZone}
+          bunnyStorageAccessKey={adminSettings.creationSettings.bunnyStorageAccessKey}
+          bunnyStorageCdnUrl={adminSettings.creationSettings.bunnyStorageCdnUrl}
+          bunnyStorageRegion={adminSettings.creationSettings.bunnyStorageRegion}
+          supportEmail={adminSettings.creationSettings.supportEmail}
+          brandColor={adminSettings.creationSettings.brandColor}
+          customHeadScripts={adminSettings.creationSettings.customHeadScripts}
+          stripePublicKey={adminSettings.creationSettings.stripePublicKey}
+          stripeSecretKey={adminSettings.creationSettings.stripeSecretKey}
+          stripeWebhookSecret={adminSettings.creationSettings.stripeWebhookSecret}
         />
-        <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <CardHeader>
-            <CardTitle className="text-xl">Policy notes</CardTitle>
+        <Card className="rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <CardHeader className="px-8 pt-8 pb-4">
+            <CardTitle className="text-xl font-bold">Policy notes</CardTitle>
             <CardDescription>How these rules affect the product.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-6 text-slate-500">
+          <CardContent className="px-8 pb-8 space-y-3 text-sm leading-6 text-slate-500">
             <p>Organization creation determines whether setup is centralized or self-serve.</p>
             <p>Course creation controls whether catalog management stays with admins or can be handled by organization staff.</p>
-            <p>Course creation itself still happens inside organization workspaces, not from the global admin section.</p>
+            <p>Infrastructure settings (Bunny, Stripe) enable key features like video hosting and payments.</p>
           </CardContent>
         </Card>
       </div>

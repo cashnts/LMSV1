@@ -18,6 +18,7 @@ import { LessonCompleteButton } from '@/components/learn/lesson-complete-button'
 import { LessonComments } from '@/components/learn/lesson-comments';
 import { LessonMarkdown } from '@/components/learn/lesson-markdown';
 import { LessonAssetsGallery, type LessonAsset } from '@/components/lessons/lesson-assets-gallery';
+import { VideoPlayer } from '@/components/learn/video-player';
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
@@ -81,6 +82,14 @@ export default async function LessonViewPage({
     year: 'numeric',
   });
 
+  // Calculate video properties for Client Component
+  const videoUrl = videoAsset ? (videoAsset.cdn_url || videoAsset.signed_url || '') : null;
+  const isIframe = !!(videoAsset && (
+    videoAsset.storage_provider === 'bunny-stream' || 
+    (videoAsset.storage_provider === 'bunny-storage' && videoUrl?.includes('mediadelivery.net')) ||
+    (videoAsset.storage_provider === 'external' && videoUrl?.includes('mediadelivery.net'))
+  ));
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white dark:bg-[#0d1117]">
       {/* Top Navigation Bar - Truly Full Width, Overlays Site Nav */}
@@ -129,29 +138,7 @@ export default async function LessonViewPage({
         <main className="flex-1 min-w-0 overflow-y-auto">
           {/* Video Player Area - Truly Edge-to-Edge */}
           <div className="w-full bg-black">
-            <div className="relative aspect-video w-full">
-              {videoAsset ? (
-                videoAsset.storage_provider === 'bunny-stream' && videoAsset.cdn_url ? (
-                  <iframe
-                    src={videoAsset.cdn_url}
-                    className="h-full w-full"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video 
-                    src={videoAsset.signed_url ?? videoAsset.cdn_url ?? ''} 
-                    controls 
-                    className="h-full w-full"
-                  />
-                )
-              ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center space-y-4 text-slate-700">
-                  <PlayCircle className="size-20 opacity-10" />
-                  <p className="text-sm font-medium">No video content for this lesson.</p>
-                </div>
-              )}
-            </div>
+            <VideoPlayer url={videoUrl} isIframe={isIframe} />
           </div>
 
           {/* Lesson Details Area */}

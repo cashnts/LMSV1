@@ -23,9 +23,9 @@ export function SiteHeader({ appName, isAppAdmin, needsAdminSetup }: Props) {
 
   const navItems = [
     { href: '/dashboard', label: 'Home' },
-    { href: '/courses', label: 'Courses' },
+    { href: '/courses', label: 'Catalog' },
+    { href: '/learn', label: 'My Learning' },
     { href: '/organization', label: 'Organizations' },
-    { href: '/learn', label: 'Learn' },
     ...((isAppAdmin || needsAdminSetup) ? [{ href: '/admin', label: needsAdminSetup ? 'Setup' : 'Admin' }] : []),
   ];
 

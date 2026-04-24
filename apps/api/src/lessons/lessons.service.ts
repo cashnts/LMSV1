@@ -249,10 +249,17 @@ export class LessonsService {
   async addAssetUrl(supabase: SupabaseClient, lessonId: string, dto: AddAssetUrlDto) {
     let url = dto.url;
     let storageProvider = 'external';
+    let bunnyVideoId: string | null = null;
 
-    const isBunnyUrl = url.includes('.b-cdn.net') || url.includes('iframe.mediadelivery.net');
+    const isBunnyStreamUrl = url.includes('iframe.mediadelivery.net/embed/');
+    const isBunnyCdnUrl = url.includes('.b-cdn.net');
     
-    if (isBunnyUrl) {
+    if (isBunnyStreamUrl) {
+      storageProvider = 'bunny-storage';
+      // Extract video ID from https://iframe.mediadelivery.net/embed/LIB_ID/VIDEO_ID
+      const parts = url.split('/');
+      bunnyVideoId = parts[parts.length - 1].split('?')[0];
+    } else if (isBunnyCdnUrl) {
       storageProvider = 'bunny-storage';
     }
 
@@ -267,7 +274,7 @@ export class LessonsService {
         kind: 'video',
         status: 'ready',
         storage_provider: storageProvider,
-        bunny_video_id: null,
+        bunny_video_id: bunnyVideoId,
         cdn_url: url,
       })
       .select()

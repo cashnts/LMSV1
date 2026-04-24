@@ -5,6 +5,7 @@ import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.s
 import { apiFetch } from '@/lib/api';
 import { EnrollByIdForm } from '@/components/learn/enroll-by-id-form';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 type Row = {
   course_id: string;
@@ -60,8 +61,15 @@ export default async function LearnPage() {
           </div>
 
           {rows.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-950">
-              <p className="text-sm text-slate-500">No active enrollments yet. Use a course ID to enroll above.</p>
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-16 text-center dark:border-slate-800 dark:bg-slate-950">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 dark:bg-slate-900 mb-4">
+                <BookOpen className="size-6" />
+              </div>
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">No active enrollments yet</p>
+              <p className="text-sm text-slate-500 mb-6 max-w-xs mx-auto">Explore our catalog to find your next learning journey or use a course ID to enroll.</p>
+              <Button asChild variant="outline" className="rounded-xl px-8 font-bold">
+                <Link href="/courses">Browse Catalog</Link>
+              </Button>
             </div>
           ) : (
             <div className="grid gap-3">

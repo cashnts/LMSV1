@@ -195,21 +195,33 @@ function AssetPreviewDialog({
                 className="max-h-[70vh] w-full object-contain mx-auto shadow-2xl"
               />
             ) : asset.kind === 'video' ? (
-              <div className="aspect-video w-full bg-black">
-                {asset.storage_provider === 'bunny-stream' ? (
-                   <iframe
-                     src={displayUrl}
-                     className="size-full"
-                     allowFullScreen
-                   />
-                ) : (
-                  <video
-                    controls
-                    preload="metadata"
-                    className="size-full"
-                    src={displayUrl}
-                  />
-                )}
+              <div className="aspect-video w-full bg-black" onContextMenu={(e) => e.preventDefault()}>
+                {(() => {
+                  const url = displayUrl || '';
+                  const isIframe = 
+                    asset.storage_provider === 'bunny-stream' || 
+                    (asset.storage_provider === 'bunny-storage' && url.includes('mediadelivery.net')) ||
+                    (asset.storage_provider === 'external' && url.includes('mediadelivery.net'));
+
+                  if (isIframe && url) {
+                    return (
+                      <iframe
+                        src={url}
+                        className="size-full border-0"
+                        allowFullScreen
+                      />
+                    );
+                  }
+                  
+                  return (
+                    <video
+                      controls
+                      preload="metadata"
+                      className="size-full"
+                      src={url}
+                    />
+                  );
+                })()}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-24 space-y-4">

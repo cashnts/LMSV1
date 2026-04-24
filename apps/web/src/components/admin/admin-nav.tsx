@@ -26,10 +26,10 @@ export function AdminNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
+              'flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all duration-200',
               isActive
-                ? 'bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-50',
+                ? 'bg-slate-950 text-white shadow-lg shadow-slate-200 dark:bg-slate-100 dark:text-slate-950 dark:shadow-none'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-slate-50',
             )}
           >
             <Icon className="h-4 w-4" />

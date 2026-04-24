@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { AdminAccessCard } from '@/components/admin/admin-access-card';
 import { InitialAdminClaimCard } from '@/components/admin/initial-admin-claim-card';
 import { AdminNav } from '@/components/admin/admin-nav';
@@ -97,18 +98,30 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
-      <div className="grid w-full gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Admin</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Admin panel</h1>
-            <p className="text-sm leading-6 text-slate-500">Workspace access, rules, and organizations.</p>
+    <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 pt-10 pb-20 sm:px-6">
+      <div className="grid w-full gap-10 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="space-y-8">
+          <div className="space-y-4 px-2">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">System</p>
+              <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50 italic">Admin</h1>
+            </div>
+            <p className="text-xs font-medium leading-relaxed text-slate-500">Global workspace management and infrastructure control.</p>
           </div>
-          <AdminNav />
-          <Button asChild variant="outline" className="w-full justify-center">
-            <Link href="/dashboard">Back to dashboard</Link>
-          </Button>
+          
+          <div className="space-y-2">
+            <p className="px-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Navigation</p>
+            <AdminNav />
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button asChild variant="ghost" size="sm" className="w-full justify-start rounded-xl text-slate-500 hover:text-slate-900 transition-colors">
+              <Link href="/dashboard">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Exit Admin
+              </Link>
+            </Button>
+          </div>
         </aside>
         <section className="min-w-0">{children}</section>
       </div>

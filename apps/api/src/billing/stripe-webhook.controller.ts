@@ -6,14 +6,28 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 @Controller('billing/stripe')
 export class StripeWebhookController {
-  private stripe: Stripe | null = null;
-
   constructor(
     private readonly config: ConfigService,
     private readonly supabase: SupabaseService,
-  ) {
-    const key = this.config.get<string>('STRIPE_SECRET_KEY');
-    if (key) this.stripe = new Stripe(key);
+  ) {}
+
+  private async getStripeInstance() {
+    const admin = this.supabase.createServiceClient();
+    const { data } = await admin
+      .from('app_config')
+      .select('stripe_secret_key, stripe_webhook_secret')
+      .eq('id', true)
+      .maybeSingle();
+
+    const secretKey = data?.stripe_secret_key || this.config.get<string>('STRIPE_SECRET_KEY');
+    const webhookSecret = data?.stripe_webhook_secret || this.config.get<string>('STRIPE_WEBHOOK_SECRET');
+
+    if (!secretKey) return null;
+
+    return {
+      stripe: new Stripe(secretKey),
+      webhookSecret,
+    };
   }
 
   @Post('webhook')
@@ -21,14 +35,17 @@ export class StripeWebhookController {
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string | undefined,
   ) {
-    const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
-    const raw = req.rawBody ?? req.body;
-    if (!this.stripe || !secret || !signature) {
+    const stripeConfig = await this.getStripeInstance();
+    if (!stripeConfig || !stripeConfig.webhookSecret || !signature) {
       return { received: true, skipped: true };
     }
+
+    const { stripe, webhookSecret } = stripeConfig;
+    const raw = req.rawBody ?? req.body;
+
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(raw, signature, secret);
+      event = stripe.webhooks.constructEvent(raw, signature, webhookSecret);
     } catch {
       return { received: false, error: 'invalid signature' };
     }

@@ -11,6 +11,7 @@ export class BunnyService {
   constructor(private readonly config: ConfigService) {
     this.streamLibraryId = config.get('BUNNY_STREAM_LIBRARY_ID', '');
     this.streamApiKey = config.get('BUNNY_STREAM_API_KEY', '');
+    this.streamTokenKey = config.get('BUNNY_STREAM_TOKEN_KEY', '');
     this.streamCdnHostname = config.get('BUNNY_STREAM_CDN_HOSTNAME', '');
     this.storageZone = config.get('BUNNY_STORAGE_ZONE', '');
     this.storageAccessKey = config.get('BUNNY_STORAGE_ACCESS_KEY', '');
@@ -26,6 +27,7 @@ export class BunnyService {
 
   private readonly streamLibraryId: string;
   private readonly streamApiKey: string;
+  private readonly streamTokenKey: string;
   private readonly streamCdnHostname: string;
   private readonly storageZone: string;
   private readonly storageAccessKey: string;

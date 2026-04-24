@@ -5,6 +5,16 @@ export type CreationSettings = {
   appName: string;
   organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
+  bunnyStorageZone: string;
+  bunnyStorageAccessKey: string;
+  bunnyStorageCdnUrl: string;
+  bunnyStorageRegion: string;
+  supportEmail: string;
+  brandColor: string;
+  customHeadScripts: string;
+  stripePublicKey: string;
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
   updatedAt: string | null;
 };
 

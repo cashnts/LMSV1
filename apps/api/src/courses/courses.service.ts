@@ -11,7 +11,7 @@ export class CoursesService {
   async listPublished(supabase: SupabaseClient) {
     const { data, error } = await supabase
       .from('courses')
-      .select('id, org_id, title, description, published, thumbnail_url, created_at')
+      .select('id, org_id, title, description, published, thumbnail_url, created_at, organizations (name)')
       .eq('published', true)
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
