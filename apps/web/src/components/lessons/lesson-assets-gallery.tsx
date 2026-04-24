@@ -95,7 +95,7 @@ export function LessonAssetsGallery({
   return (
     <div className="space-y-2">
       {assets.map((asset) => {
-        const isBunnyStream = asset.storage_provider === 'bunny-stream';
+        const isBunnyStream = asset.storage_provider === 'bunny-stream' || !!asset.bunny_video_id;
         const displayUrl = asset.signed_url ?? asset.cdn_url;
         const Icon = KIND_ICONS[asset.kind] || FileText;
 
@@ -108,6 +108,10 @@ export function LessonAssetsGallery({
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-slate-950 ring-1 ring-slate-200/50 dark:ring-slate-800/50 overflow-hidden">
               {asset.kind === 'image' && displayUrl ? (
                 <img src={displayUrl} className="size-full object-cover" alt="" />
+              ) : asset.kind === 'video' && isBunnyStream ? (
+                <div className="size-full bg-slate-900 flex items-center justify-center">
+                  <Play className="size-3 text-white fill-white" />
+                </div>
               ) : (
                 <Icon className="size-4 text-slate-400" />
               )}

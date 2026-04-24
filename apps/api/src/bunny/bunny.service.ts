@@ -61,10 +61,36 @@ export class BunnyService {
     return !!(this.storageZone && this.storageAccessKey && this.storageCdnUrl);
   }
 
+  private async fetchWithRetry(url: string, init?: RequestInit, retries = 3): Promise<Response> {
+    let lastError: any;
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await this.fetch(url, {
+          ...init,
+          signal: i === retries - 1 ? init?.signal : AbortSignal.timeout(20_000),
+        });
+        // Only return if it's a success or a non-retryable error (like 4xx)
+        if (res.ok || (res.status >= 400 && res.status < 500)) {
+          return res;
+        }
+        // If 5xx, we might want to retry
+        this.logger.warn(`Bunny API returned ${res.status}, retrying (${i + 1}/${retries})...`);
+      } catch (err) {
+        lastError = err;
+        const msg = BunnyService.unwrapFetchError(err);
+        this.logger.warn(`Bunny API connection error: ${msg}, retrying (${i + 1}/${retries})...`);
+        if (i < retries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, Math.pow(2, i) * 1000));
+        }
+      }
+    }
+    throw lastError || new Error('Max retries reached');
+  }
+
   async createStreamVideo(title: string): Promise<{ guid: string }> {
     let res: Response;
     try {
-      res = await this.fetch(
+      res = await this.fetchWithRetry(
         `https://video.bunnycdn.com/library/${this.streamLibraryId}/videos`,
         {
           method: 'POST',
@@ -73,12 +99,12 @@ export class BunnyService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ title }),
-          signal: BunnyService.timeout(),
+          signal: BunnyService.timeout(30_000),
         },
       );
     } catch (err) {
       const msg = BunnyService.unwrapFetchError(err);
-      this.logger.error(`Bunny Stream unreachable: ${msg}`);
+      this.logger.error(`Bunny Stream unreachable after retries: ${msg}`);
       throw new BadGatewayException(`Bunny Stream unreachable: ${msg}`);
     }
     if (!res.ok) {
@@ -87,6 +113,35 @@ export class BunnyService {
       throw new BadGatewayException(`Bunny Stream create video failed (${res.status}): ${text}`);
     }
     return res.json() as Promise<{ guid: string }>;
+  }
+
+  async fetchStreamVideo(videoId: string, url: string) {
+    let res: Response;
+    try {
+      res = await this.fetchWithRetry(
+        `https://video.bunnycdn.com/library/${this.streamLibraryId}/videos/${videoId}`,
+        {
+          method: 'PUT',
+          headers: {
+            AccessKey: this.streamApiKey,
+            'Content-Type': 'application/octet-stream',
+          },
+          // The API expects a JSON-encoded string for the URL when fetching
+          body: JSON.stringify(url),
+          signal: BunnyService.timeout(30_000),
+        },
+      );
+    } catch (err) {
+      const msg = BunnyService.unwrapFetchError(err);
+      this.logger.error(`Bunny Stream fetch from URL failed: ${msg}`);
+      throw new BadGatewayException(`Bunny Stream fetch failed: ${msg}`);
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      this.logger.error(`Bunny Stream fetch video (${res.status}): ${text}`);
+      throw new BadGatewayException(`Bunny Stream fetch failed (${res.status}): ${text}`);
+    }
+    return { ok: true };
   }
 
   createTusCredentials(videoId: string) {
@@ -112,10 +167,14 @@ export class BunnyService {
   }
 
   async deleteStreamVideo(videoId: string) {
-    await this.fetch(
-      `https://video.bunnycdn.com/library/${this.streamLibraryId}/videos/${videoId}`,
-      { method: 'DELETE', headers: { AccessKey: this.streamApiKey } },
-    );
+    try {
+      await this.fetchWithRetry(
+        `https://video.bunnycdn.com/library/${this.streamLibraryId}/videos/${videoId}`,
+        { method: 'DELETE', headers: { AccessKey: this.streamApiKey } },
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to delete Bunny video ${videoId}: ${BunnyService.unwrapFetchError(err)}`);
+    }
   }
 
   private get storageHost() {
@@ -124,10 +183,18 @@ export class BunnyService {
       : `${this.storageRegion}.storage.bunnycdn.com`;
   }
 
-  async uploadToStorage(path: string, data: Buffer, contentType: string): Promise<string> {
+  async uploadToStorage(path: string, data: Buffer, contentType: string): Promise<{ cdnUrl: string; directUrl: string }> {
+    if (!this.storageZone || !this.storageAccessKey) {
+      this.logger.error('Bunny Storage is not fully configured (missing zone or access key)');
+      throw new BadGatewayException('Bunny Storage configuration incomplete');
+    }
+
+    const directUrl = `https://${this.storageHost}/${this.storageZone}/${path}`;
+    this.logger.debug(`Attempting Bunny Storage upload to: ${directUrl} (Region: ${this.storageRegion})`);
+
     let res: Response;
     try {
-      res = await this.fetch(`https://${this.storageHost}/${this.storageZone}/${path}`, {
+      res = await this.fetchWithRetry(directUrl, {
         method: 'PUT',
         headers: {
           AccessKey: this.storageAccessKey,
@@ -143,16 +210,32 @@ export class BunnyService {
     }
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
-      this.logger.error(`Bunny Storage upload (${res.status}): ${text}`);
+      let errorMessage = `Bunny Storage upload (${res.status}): ${text} (Zone: ${this.storageZone}, Host: ${this.storageHost})`;
+
+      if (res.status === 401) {
+        if (this.storageZone === this.storageRegion) {
+          errorMessage += `\n[CRITICAL] Your BUNNY_STORAGE_ZONE and BUNNY_STORAGE_REGION are both set to "${this.storageZone}". This is likely a configuration error. The Zone should be your storage name (e.g., "my-assets"), not the region code.`;
+        }
+        errorMessage += `\n[ACTION] Please verify you are using the "Storage Zone Password" found in the "FTP & API Access" tab of your Bunny storage zone, NOT your main account API key.`;
+      }
+
+      this.logger.error(errorMessage);
       throw new BadGatewayException(`Bunny Storage upload failed (${res.status}): ${text}`);
     }
-    return `${this.storageCdnUrl}/${path}`;
+    return { 
+      cdnUrl: `${this.storageCdnUrl}/${path}`,
+      directUrl: directUrl
+    };
   }
 
   async deleteFromStorage(path: string) {
-    await this.fetch(`https://${this.storageHost}/${this.storageZone}/${path}`, {
-      method: 'DELETE',
-      headers: { AccessKey: this.storageAccessKey },
-    });
+    try {
+      await this.fetchWithRetry(`https://${this.storageHost}/${this.storageZone}/${path}`, {
+        method: 'DELETE',
+        headers: { AccessKey: this.storageAccessKey },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to delete Bunny storage asset ${path}: ${BunnyService.unwrapFetchError(err)}`);
+    }
   }
 }

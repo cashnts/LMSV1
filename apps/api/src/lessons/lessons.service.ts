@@ -102,54 +102,37 @@ export class LessonsService {
     return { ok: true };
   }
 
-  private async getLessonOrgId(supabase: SupabaseClient, lessonId: string): Promise<string> {
-    const lesson = await this.get(supabase, lessonId);
-    const { data: course, error } = await supabase
-      .from('courses')
-      .select('org_id')
-      .eq('id', lesson.course_id)
-      .single();
-    if (error || !course) throw new NotFoundException('Course not found');
-    return course.org_id as string;
+  private sanitizeName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   async createUploadIntent(supabase: SupabaseClient, lessonId: string, dto: CreateAssetDto) {
-    const orgId = await this.getLessonOrgId(supabase, lessonId);
-    const safeName = dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const objectPath = `${orgId}/${lessonId}/${Date.now()}-${safeName}`;
-
-    // --- Bunny Stream (videos) ---
-    if (dto.kind === 'video' && this.bunny.isStreamConfigured()) {
-      const video = await this.bunny.createStreamVideo(dto.filename);
-      const embedUrl = this.bunny.getStreamEmbedUrl(video.guid);
-      const tus = this.bunny.createTusCredentials(video.guid);
-
-      const { data: row, error } = await supabase
-        .from('lesson_assets')
-        .insert({
-          lesson_id: lessonId,
-          object_path: objectPath,
-          filename: dto.filename,
-          mime_type: dto.mimeType ?? null,
-          bytes: 0,
-          kind: 'video',
-          status: 'processing',
-          storage_provider: 'bunny-stream',
-          bunny_video_id: video.guid,
-          cdn_url: embedUrl,
-        })
-        .select()
-        .single();
-      if (error) {
-        await this.bunny.deleteStreamVideo(video.guid).catch(() => null);
-        throw new Error(error.message);
-      }
-
-      return { asset: row, uploadType: 'bunny-stream', ...tus };
+    if (dto.kind === 'video') {
+      throw new BadRequestException('Video uploads are not supported. Use video links instead.');
     }
 
-    // --- Bunny Storage (images + files) ---
-    if (dto.kind !== 'video' && this.bunny.isStorageConfigured()) {
+    const { data: lesson, error: le } = await supabase
+      .from('lessons')
+      .select('title, course_id, courses(title, org_id, organizations(name))')
+      .eq('id', lessonId)
+      .single();
+
+    if (le || !lesson) throw new NotFoundException('Lesson not found');
+
+    const course = (lesson as any).courses;
+    const org = course?.organizations;
+
+    const safeOrgName = this.sanitizeName(org?.name || 'unknown-org');
+    const safeCourseName = this.sanitizeName(course?.title || 'unknown-course');
+    const safeFileName = dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    const objectPath = `${safeOrgName}/${safeCourseName}/${lessonId}/${Date.now()}-${safeFileName}`;
+
+    if (this.bunny.isStorageConfigured()) {
       const { data: row, error } = await supabase
         .from('lesson_assets')
         .insert({
@@ -175,7 +158,6 @@ export class LessonsService {
       };
     }
 
-    // --- Supabase fallback ---
     const { data: row, error: ie } = await supabase
       .from('lesson_assets')
       .insert({
@@ -226,7 +208,7 @@ export class LessonsService {
       throw new BadRequestException('Asset is not a Bunny Storage asset');
     }
 
-    const cdnUrl = await this.bunny.uploadToStorage(
+    const { cdnUrl } = await this.bunny.uploadToStorage(
       asset.object_path as string,
       file.buffer,
       file.mimetype,
@@ -266,17 +248,12 @@ export class LessonsService {
 
   async addAssetUrl(supabase: SupabaseClient, lessonId: string, dto: AddAssetUrlDto) {
     let url = dto.url;
-    let videoId: string | null = null;
+    let storageProvider = 'external';
 
-    // Normalize Bunny HLS URL → embed URL
-    const hlsMatch = url.match(/^https?:\/\/[^/]+\/([a-f0-9-]{36}(?:-[a-f0-9]+)?|[a-f0-9-]+)\/playlist\.m3u8$/i);
-    if (hlsMatch) {
-      videoId = hlsMatch[1];
-      url = this.bunny.getStreamEmbedUrl(videoId);
-    } else {
-      // Extract videoId from embed URL if present
-      const embedMatch = url.match(/\/embed\/\d+\/([a-f0-9-]+)/i);
-      if (embedMatch) videoId = embedMatch[1];
+    const isBunnyUrl = url.includes('.b-cdn.net') || url.includes('iframe.mediadelivery.net');
+    
+    if (isBunnyUrl) {
+      storageProvider = 'bunny-storage';
     }
 
     const { data, error } = await supabase
@@ -289,8 +266,8 @@ export class LessonsService {
         bytes: 0,
         kind: 'video',
         status: 'ready',
-        storage_provider: 'bunny-stream',
-        bunny_video_id: videoId,
+        storage_provider: storageProvider,
+        bunny_video_id: null,
         cdn_url: url,
       })
       .select()
@@ -309,15 +286,11 @@ export class LessonsService {
 
     const provider = asset.storage_provider as string;
 
-    if (provider === 'bunny-stream' && asset.bunny_video_id) {
-      await this.bunny.deleteStreamVideo(asset.bunny_video_id as string).catch((e) =>
-        console.warn('Bunny Stream delete:', e),
-      );
-    } else if (provider === 'bunny-storage') {
+    if (provider === 'bunny-storage') {
       await this.bunny
         .deleteFromStorage(asset.object_path as string)
         .catch((e) => console.warn('Bunny Storage delete:', e));
-    } else {
+    } else if (provider !== 'bunny-stream' && provider !== 'external') {
       const { error: re } = await supabase.storage
         .from('lesson-assets')
         .remove([asset.object_path as string]);

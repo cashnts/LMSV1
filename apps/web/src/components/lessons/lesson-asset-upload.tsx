@@ -2,8 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload } from 'tus-js-client';
-import { UploadCloud, FileText, Image as ImageIcon, Video, XCircle, Sparkles } from 'lucide-react';
+import { FileText, Image as ImageIcon, XCircle, Sparkles } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
 import { cn } from '@/lib/utils';
@@ -11,7 +10,6 @@ import { cn } from '@/lib/utils';
 const API_BASE = () => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
 type UploadIntent =
-  | { uploadType: 'bunny-stream'; asset: { id: string }; tusEndpoint: string; authSignature: string; authExpire: number; videoId: string; libraryId: string }
   | { uploadType: 'bunny-storage'; asset: { id: string }; uploadPath: string }
   | { uploadType: 'supabase'; asset: { id: string }; signedUrl: string; path: string; token: string };
 
@@ -29,14 +27,16 @@ export function LessonAssetUpload({
   const [isDragging, setIsDragging] = useState(false);
 
   async function handleUpload(file: File) {
+    if (file.type.startsWith('video/')) {
+      setError('Video uploads are disabled. Please use the External Video section.');
+      return;
+    }
+
     setProgress(0);
     setError(null);
     setStatusLabel('Preparing…');
 
-    // Determine kind based on mime type
-    let kind: 'video' | 'image' | 'file' = 'file';
-    if (file.type.startsWith('video/')) kind = 'video';
-    else if (file.type.startsWith('image/')) kind = 'image';
+    let kind: 'image' | 'file' = file.type.startsWith('image/') ? 'image' : 'file';
 
     const accessToken = await getAccessToken();
     if (!accessToken) {
@@ -51,37 +51,7 @@ export function LessonAssetUpload({
         body: JSON.stringify({ filename: file.name, kind, mimeType: file.type || undefined }),
       });
 
-      if (intent.uploadType === 'bunny-stream') {
-        setStatusLabel('Uploading video…');
-        await new Promise<void>((resolve, reject) => {
-          const upload = new Upload(file, {
-            endpoint: intent.tusEndpoint,
-            retryDelays: [0, 3000, 5000, 10000],
-            headers: {
-              AuthorizationSignature: intent.authSignature,
-              AuthorizationExpire: String(intent.authExpire),
-              VideoId: intent.videoId,
-              LibraryId: intent.libraryId,
-            },
-            metadata: { filetype: file.type, title: file.name },
-            onProgress(bytesUploaded, bytesTotal) {
-              setProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-            },
-            onSuccess() {
-              resolve();
-            },
-            onError(err) {
-              reject(new Error(err instanceof Error ? err.message : String(err)));
-            },
-          });
-          upload.start();
-        });
-        await apiFetch(`/lessons/assets/${intent.asset.id}`, accessToken, {
-          method: 'PATCH',
-          body: JSON.stringify({ bytes: file.size }),
-        });
-
-      } else if (intent.uploadType === 'bunny-storage') {
+      if (intent.uploadType === 'bunny-storage') {
         setStatusLabel(`Uploading ${kind}…`);
         const form = new FormData();
         form.append('file', file);
@@ -96,7 +66,7 @@ export function LessonAssetUpload({
           };
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`Upload failed (${xhr.status})`));
+            else reject(new Error(`Upload failed`));
           };
           xhr.onerror = () => reject(new Error('Network error'));
           xhr.send(form);
@@ -115,7 +85,7 @@ export function LessonAssetUpload({
           };
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`Upload failed (${xhr.status})`));
+            else reject(new Error(`Upload failed`));
           };
           xhr.onerror = () => reject(new Error('Network error'));
 
@@ -169,7 +139,7 @@ export function LessonAssetUpload({
         onDrop={onDrop}
         onClick={() => progress === null && inputRef.current?.click()}
         className={cn(
-          "relative group cursor-pointer flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed p-10 transition-all duration-300",
+          "relative group cursor-pointer flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed p-8 transition-all duration-300",
           isDragging 
             ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/5" 
             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900/50",
@@ -179,29 +149,37 @@ export function LessonAssetUpload({
         <input
           ref={inputRef}
           type="file"
+          accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"
           onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
           className="hidden"
         />
 
-
+        <div className="mb-4 flex items-center justify-center gap-4">
+           <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+             <ImageIcon className="size-5" />
+           </div>
+           <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+             <FileText className="size-5" />
+           </div>
+        </div>
 
         <div className="text-center">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            {progress !== null ? statusLabel : "Add course materials"}
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            {progress !== null ? statusLabel : "Upload resources"}
           </h3>
-          <p className="mt-2 text-sm text-slate-500">
-            {progress !== null ? "Please wait for completion..." : "Drag and drop video, images, or documents here"}
+          <p className="mt-1 text-xs text-slate-500">
+            {progress !== null ? "Uploading file..." : "Drop images or documents here"}
           </p>
         </div>
 
         {progress !== null && (
           <div className="absolute inset-0 flex items-center justify-center rounded-[2rem] bg-white/60 backdrop-blur-[2px] dark:bg-slate-950/60">
-            <div className="w-full max-w-[70%] space-y-4 px-4">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-indigo-600">
+            <div className="w-full max-w-[70%] space-y-3 px-4">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-indigo-600">
                 <span>{statusLabel}</span>
                 <span>{progress}%</span>
               </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
                   className="h-full bg-indigo-500 transition-all duration-300"
                   style={{ width: `${progress}%` }}
@@ -213,7 +191,7 @@ export function LessonAssetUpload({
 
         {error && (
           <div className="mt-4 flex items-center gap-2 rounded-full bg-red-50 px-4 py-1.5 text-xs font-bold text-red-600 dark:bg-red-900/20">
-            <XCircle className="size-4" />
+            <XCircle className="size-3.5" />
             {error}
           </div>
         )}
