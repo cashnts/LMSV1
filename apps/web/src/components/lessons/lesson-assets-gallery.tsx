@@ -4,11 +4,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Expand, Trash2 } from 'lucide-react';
+import { Expand, Trash2, FileText, Image as ImageIcon, Video, ExternalLink, Play, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
+import { cn } from '@/lib/utils';
 
 export type LessonAsset = {
   id: string;
@@ -39,7 +40,8 @@ function DeleteAssetButton({ assetId }: { assetId: string }) {
   const { getAccessToken } = useSupabaseAccessToken();
   const [loading, setLoading] = useState(false);
 
-  async function handleDelete() {
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!confirm('Delete this file? This cannot be undone.')) return;
     setLoading(true);
     try {
@@ -61,24 +63,17 @@ function DeleteAssetButton({ assetId }: { assetId: string }) {
       className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 dark:hover:bg-red-950/30"
       title="Delete file"
     >
-      <Trash2 className="size-4" />
+      <Trash2 className="size-3.5" />
     </button>
   );
 }
 
-function BunnyStreamPlayer({ url, title }: { url: string; title: string }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800" style={{ aspectRatio: '16/9', maxWidth: 560 }}>
-      <iframe
-        src={url}
-        title={title}
-        className="h-full w-full"
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
-}
+const KIND_ICONS = {
+  document: FileText,
+  file: FileText,
+  image: ImageIcon,
+  video: Video,
+};
 
 export function LessonAssetsGallery({
   assets,
@@ -90,83 +85,60 @@ export function LessonAssetsGallery({
   canDelete?: boolean;
 }) {
   if (assets.length === 0) {
-    return <p className="text-sm text-slate-500">{emptyLabel}</p>;
+    return (
+      <div className="py-6 text-center">
+        <p className="text-xs font-medium text-slate-400 italic">{emptyLabel}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="space-y-2">
       {assets.map((asset) => {
         const isBunnyStream = asset.storage_provider === 'bunny-stream';
         const displayUrl = asset.signed_url ?? asset.cdn_url;
+        const Icon = KIND_ICONS[asset.kind] || FileText;
 
         return (
           <div
             key={asset.id}
-            className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+            className="group relative flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/30 p-2 transition-all hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800/50 dark:bg-slate-900/20 dark:hover:border-slate-700 dark:hover:bg-slate-900/40"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-900 dark:text-slate-100">{asset.filename}</p>
-                <p className="text-xs text-slate-500">{formatBytes(asset.bytes)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{asset.kind}</Badge>
-                {isBunnyStream && <Badge variant="secondary">Bunny Stream</Badge>}
-                <Badge variant={asset.status === 'ready' ? 'success' : 'secondary'}>{asset.status}</Badge>
-                {canDelete && <DeleteAssetButton assetId={asset.id} />}
-              </div>
+            {/* Minimal Preview/Icon */}
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-slate-950 ring-1 ring-slate-200/50 dark:ring-slate-800/50 overflow-hidden">
+              {asset.kind === 'image' && displayUrl ? (
+                <img src={displayUrl} className="size-full object-cover" alt="" />
+              ) : (
+                <Icon className="size-4 text-slate-400" />
+              )}
             </div>
 
-            {/* Bunny Stream: iframe embed player */}
-            {isBunnyStream && asset.cdn_url ? (
-              <BunnyStreamPlayer url={asset.cdn_url} title={asset.filename} />
-            ) : null}
-
-            {/* Regular image preview (Supabase or Bunny Storage) */}
-            {!isBunnyStream && asset.kind === 'image' && displayUrl ? (
-              <AssetPreviewDialog asset={asset} displayUrl={displayUrl}>
-                <div className="block max-w-[220px] cursor-zoom-in overflow-hidden rounded-xl border border-slate-200 transition hover:border-slate-300 dark:border-slate-800">
-                  <img
-                    src={displayUrl}
-                    alt={asset.filename}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                </div>
-              </AssetPreviewDialog>
-            ) : null}
-
-            {/* Regular video preview (Supabase only — Bunny videos use iframe above) */}
-            {!isBunnyStream && asset.kind === 'video' && displayUrl ? (
-              <AssetPreviewDialog asset={asset} displayUrl={displayUrl}>
-                <div className="block max-w-[260px] cursor-zoom-in overflow-hidden rounded-xl border border-slate-200 bg-black transition hover:border-slate-300 dark:border-slate-800">
-                  <video
-                    controls
-                    preload="metadata"
-                    className="aspect-video w-full bg-black"
-                    src={displayUrl}
-                  />
-                </div>
-              </AssetPreviewDialog>
-            ) : null}
-
-            {/* Download / open link (non-stream assets) */}
-            {!isBunnyStream && displayUrl ? (
-              <a
-                href={displayUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-fit text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-slate-950 dark:text-slate-300 dark:hover:text-slate-50"
-              >
-                Open file
-              </a>
-            ) : null}
-
-            {/* Transcoding notice for Bunny Stream */}
-            {isBunnyStream && asset.status === 'processing' && !asset.cdn_url ? (
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                Video is being processed by Bunny Stream. Check back shortly.
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                 <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
+                   {asset.filename}
+                 </p>
+                 {asset.status !== 'ready' && (
+                   <Badge variant="secondary" className="h-4 px-1 text-[8px] uppercase">
+                     {asset.status}
+                   </Badge>
+                 )}
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">
+                {asset.kind} • {formatBytes(asset.bytes)}
               </p>
-            ) : null}
+            </div>
+
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {displayUrl && (
+                <AssetPreviewDialog asset={asset} displayUrl={displayUrl}>
+                  <button className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30 transition-colors">
+                    <Eye className="size-3.5" />
+                  </button>
+                </AssetPreviewDialog>
+              )}
+              {canDelete && <DeleteAssetButton assetId={asset.id} />}
+            </div>
           </div>
         );
       })}
@@ -187,43 +159,64 @@ function AssetPreviewDialog({
     <Dialog.Root>
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex w-[min(92vw,1100px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl outline-none dark:border-slate-800 dark:bg-slate-950">
-          <div className="flex items-center justify-between gap-4">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex w-[min(92vw,1100px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-2xl outline-none dark:border-slate-800 dark:bg-slate-950 animate-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between gap-4 px-2">
             <div className="min-w-0">
-              <Dialog.Title className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">
+              <Dialog.Title className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">
                 {asset.filename}
               </Dialog.Title>
-              <Dialog.Description className="text-sm text-slate-500">
-                Click outside to close.
+              <Dialog.Description className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                {asset.kind} • {asset.storage_provider}
               </Dialog.Description>
             </div>
-            <Button asChild size="sm" variant="outline">
-              <a href={displayUrl} target="_blank" rel="noreferrer">
-                <Expand />
-                Open file
-              </a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild size="sm" variant="outline" className="rounded-xl font-bold">
+                <a href={displayUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="mr-2 size-3.5" />
+                  Source
+                </a>
+              </Button>
+              <Dialog.Close asChild>
+                 <Button size="sm" className="rounded-xl font-bold bg-slate-900 text-white">Close</Button>
+              </Dialog.Close>
+            </div>
           </div>
 
-          {asset.kind === 'image' ? (
-            <div className="overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-900">
+          <div className="relative mt-2 overflow-hidden rounded-[1.5rem] bg-slate-50 dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800/50">
+            {asset.kind === 'image' ? (
               <img
                 src={displayUrl}
                 alt={asset.filename}
-                className="max-h-[75vh] w-full object-contain"
+                className="max-h-[70vh] w-full object-contain mx-auto shadow-2xl"
               />
-            </div>
-          ) : asset.kind === 'video' ? (
-            <div className="overflow-hidden rounded-2xl bg-black">
-              <video
-                controls
-                preload="metadata"
-                className="max-h-[75vh] w-full bg-black"
-                src={displayUrl}
-              />
-            </div>
-          ) : null}
+            ) : asset.kind === 'video' ? (
+              <div className="aspect-video w-full bg-black">
+                {asset.storage_provider === 'bunny-stream' ? (
+                   <iframe
+                     src={displayUrl}
+                     className="size-full"
+                     allowFullScreen
+                   />
+                ) : (
+                  <video
+                    controls
+                    preload="metadata"
+                    className="size-full"
+                    src={displayUrl}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                 <FileText className="size-16 text-slate-200" />
+                 <p className="text-sm font-medium text-slate-500">Preview not available for this file type.</p>
+                 <Button asChild variant="secondary" className="rounded-xl font-bold">
+                    <a href={displayUrl} target="_blank" rel="noreferrer">Download File</a>
+                 </Button>
+              </div>
+            )}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

@@ -22,4 +22,8 @@ export class CreateCourseDto {
   @IsString()
   @MaxLength(2000)
   thumbnailUrl?: string;
+
+  @IsOptional()
+  @IsString({ each: true })
+  outcomes?: string[];
 }

@@ -22,7 +22,14 @@ import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 type Course = { id: string; title: string };
-type Lesson = { id: string; title: string; content_md: string | null; sort_order: number };
+type Lesson = { 
+  id: string; 
+  title: string; 
+  content_md: string | null; 
+  sort_order: number;
+  updated_at: string;
+  asset_count?: number;
+};
 type Progress = { lesson_id: string; completed_at: string | null };
 type Enrollment = { course_id: string };
 
@@ -67,6 +74,12 @@ export default async function LessonViewPage({
 
   const videoAsset = assets.find(a => a.kind === 'video');
   const otherAssets = assets.filter(a => a.id !== videoAsset?.id);
+
+  const lastUpdated = new Date(lesson.updated_at).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white dark:bg-[#0d1117]">
@@ -113,10 +126,10 @@ export default async function LessonViewPage({
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Column: Video & Lesson Details */}
-        <main className="flex-1 overflow-y-auto">
-          {/* Video Player Area */}
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          {/* Video Player Area - Truly Edge-to-Edge */}
           <div className="w-full bg-black">
-            <div className="relative mx-auto aspect-video w-full max-w-[1440px]">
+            <div className="relative aspect-video w-full">
               {videoAsset ? (
                 videoAsset.storage_provider === 'bunny-stream' && videoAsset.cdn_url ? (
                   <iframe
@@ -142,16 +155,18 @@ export default async function LessonViewPage({
           </div>
 
           {/* Lesson Details Area */}
-          <div className="mx-auto w-full max-w-[1440px] px-8 py-10 lg:px-12">
-            <div className="mb-10 flex flex-wrap items-center justify-between gap-6 border-b border-slate-200 pb-8 dark:border-slate-800">
+          <div className="w-full py-10">
+            {/* Header info - Flush with video edges */}
+            <div className="mb-10 flex flex-wrap items-center justify-between gap-6 border-b border-slate-200 px-8 pb-8 dark:border-slate-800 lg:px-12">
               <div>
                 <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{lesson.title}</h1>
-                <p className="mt-2 text-sm text-slate-500">Last updated April 23, 2026</p>
+                <p className="mt-2 text-sm text-slate-500">Last updated {lastUpdated}</p>
               </div>
               <LessonCompleteButton lessonId={lessonId} initialDone={done.has(lessonId)} />
             </div>
 
-            <div className="space-y-16">
+            {/* Main content - with balanced internal padding */}
+            <div className="space-y-16 px-8 lg:px-12">
               {/* Lesson Overview */}
               <section className="space-y-6">
                 <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
@@ -233,10 +248,9 @@ export default async function LessonViewPage({
                     </p>
                     <div className="mt-2 flex items-center gap-3 text-[11px] font-medium text-slate-500">
                        <span className="flex items-center gap-1">
-                         <PlayCircle className="size-3" />
-                         Video
+                         <FileStack className="size-3" />
+                         {l.asset_count || 0} resources
                        </span>
-                       <span>8m</span>
                     </div>
                   </div>
                 </Link>

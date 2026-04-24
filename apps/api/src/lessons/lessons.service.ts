@@ -47,11 +47,15 @@ export class LessonsService {
   async list(supabase: SupabaseClient, courseId: string) {
     const { data, error } = await supabase
       .from('lessons')
-      .select('*')
+      .select('*, lesson_assets(count)')
       .eq('course_id', courseId)
       .order('sort_order', { ascending: true });
     if (error) throw new Error(error.message);
-    return data;
+    
+    return (data ?? []).map(lesson => ({
+      ...lesson,
+      asset_count: (lesson as any).lesson_assets?.[0]?.count ?? 0
+    }));
   }
 
   async get(supabase: SupabaseClient, id: string) {

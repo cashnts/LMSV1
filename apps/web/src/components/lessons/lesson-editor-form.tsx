@@ -59,7 +59,7 @@ export function LessonEditorForm({
           id="lm"
           value={contentMd}
           onChange={(e) => setContentMd(e.target.value)}
-          rows={12}
+          rows={8}
           className="font-mono text-sm"
         />
       </div>

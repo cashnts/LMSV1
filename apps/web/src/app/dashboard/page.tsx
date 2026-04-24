@@ -88,7 +88,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <StatCard label="Organizations" value={orgs.length} hint="Teams you belong to" />
+        <StatCard label="Organizations" value={orgs.length} hint="Workspaces you belong to" />
         <StatCard label="Enrolled" value={enrollments.length} hint="Courses already joined" />
         <StatCard label="Certificates" value={certificates.length} hint="Earned certificates" />
         <StatCard label="Active orgs" value={orgs.filter((org) => org.subscription_status === 'active').length} hint="Organizations with active status" />

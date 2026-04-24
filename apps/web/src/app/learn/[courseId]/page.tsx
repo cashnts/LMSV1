@@ -24,8 +24,17 @@ type Course = {
   description: string | null;
   published: boolean;
   thumbnail_url: string | null;
+  updated_at: string;
+  enrollment_count?: number;
+  outcomes: string[];
 };
-type Lesson = { id: string; title: string; sort_order: number; content_md: string | null };
+type Lesson = { 
+  id: string; 
+  title: string; 
+  sort_order: number; 
+  content_md: string | null;
+  asset_count?: number;
+};
 type Progress = { lesson_id: string; completed_at: string | null };
 type Enrollment = { course_id: string };
 type Certificate = { id: string; issued_at: string };
@@ -82,6 +91,11 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
 
   const done = new Set(progress.filter((p) => p.completed_at).map((p) => p.lesson_id));
   const progressPct = lessons.length > 0 ? Math.round((done.size / lessons.length) * 100) : 0;
+  const totalAssets = lessons.reduce((acc, l) => acc + (l.asset_count || 0), 0);
+  const lastUpdated = new Date(course.updated_at).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
 
   return (
     <AppShell className="max-w-[1440px] xl:px-8">
@@ -119,15 +133,15 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
               <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-indigo-400" />
-                  <span>1,240 enrolled</span>
+                  <span>{course.enrollment_count || 0} enrolled</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="size-5 text-indigo-400" />
-                  <span>8h total content</span>
+                  <span>{lessons.length} Lessons</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Calendar className="size-5" />
-                  <span>Updated April 2026</span>
+                  <span>Updated {lastUpdated}</span>
                 </div>
               </div>
             </div>
@@ -156,12 +170,12 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
             <section className="rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900/40">
               <h2 className="text-2xl font-bold tracking-tight">What you&apos;ll achieve</h2>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {[
+                {(course.outcomes && course.outcomes.length > 0 ? course.outcomes : [
                   'Foundational principles and advanced concepts',
                   'Practical skills for real-world application',
                   'Industry standard workflows and best practices',
                   'Comprehensive project-based portfolio work',
-                ].map((item, i) => (
+                ]).map((item, i) => (
                   <div key={i} className="flex items-start gap-3 text-slate-600 dark:text-slate-400">
                     <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" />
                     <span className="text-sm leading-6">{item}</span>
@@ -175,13 +189,13 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <h2 className="text-2xl font-bold tracking-tight">Curriculum</h2>
                 <p className="text-sm font-medium text-slate-500">
-                  {lessons.length} lessons • 8h 15m content
+                  {lessons.length} lessons
                 </p>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40">
                 {lessons.map((lesson, i) => {
-                  const LessonWrapper = isEnrolled ? Link : 'div';
+                  const LessonWrapper = (isEnrolled ? Link : 'div') as any;
                   return (
                     <LessonWrapper
                       key={lesson.id}
@@ -196,7 +210,7 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate">{lesson.title}</h3>
-                          <p className="mt-1 text-xs text-slate-500">Video • 8:45m</p>
+                          <p className="mt-1 text-xs text-slate-500">{lesson.asset_count || 0} resources</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -235,7 +249,6 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
                   <div className="space-y-4">
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-extrabold text-slate-950 dark:text-white">Free</span>
-                      <span className="text-sm font-medium text-slate-500 line-through decoration-slate-400">₹3,499</span>
                     </div>
                     <EnrollCourseButton courseId={courseId} enrolled={isEnrolled} />
                     <p className="text-center text-xs font-medium text-slate-500">Full lifetime access guaranteed</p>
@@ -259,8 +272,8 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
                   <div className="space-y-4 border-t border-slate-100 pt-8 dark:border-slate-800">
                     <p className="text-sm font-bold">This course includes:</p>
                     <ul className="space-y-3">
-                      <SidebarBenefit icon={Video} text={`${lessons.length} video lectures`} />
-                      <SidebarBenefit icon={FileStack} text="12 downloadable resources" />
+                      <SidebarBenefit icon={Video} text={`${lessons.length} lessons`} />
+                      <SidebarBenefit icon={FileStack} text={`${totalAssets} resources`} />
                       <SidebarBenefit icon={Sparkles} text="Certificate of completion" />
                     </ul>
                   </div>
@@ -278,14 +291,6 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 p-8 dark:border-slate-800">
-                <h3 className="text-lg font-bold">Learning for teams?</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Empower your team with high-quality training and advanced learning tools.
-                </p>
-                <Button variant="outline" className="mt-6 w-full rounded-xl font-bold">Try Business</Button>
               </div>
             </div>
           </aside>

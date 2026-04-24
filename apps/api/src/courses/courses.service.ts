@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
 @Injectable()
 export class CoursesService {
+  constructor(private readonly supabaseService: SupabaseService) {}
+
   async listPublished(supabase: SupabaseClient) {
     const { data, error } = await supabase
       .from('courses')
@@ -26,10 +29,24 @@ export class CoursesService {
   }
 
   async get(supabase: SupabaseClient, id: string) {
-    const { data, error } = await supabase.from('courses').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new NotFoundException('Course not found');
-    return data;
+    
+    // Use service role to get accurate total count across all users
+    const serviceClient = this.supabaseService.createServiceClient();
+    const { count, error: countError } = await serviceClient
+      .from('enrollments')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', id);
+    
+    if (countError) console.error('Error fetching enrollment count:', countError);
+
+    return { ...data, enrollment_count: count ?? 0 };
   }
 
   async create(supabase: SupabaseClient, dto: CreateCourseDto) {
@@ -41,6 +58,7 @@ export class CoursesService {
         description: dto.description ?? '',
         published: dto.published ?? false,
         thumbnail_url: dto.thumbnailUrl ?? null,
+        outcomes: dto.outcomes ?? [],
       })
       .select()
       .single();
@@ -54,6 +72,7 @@ export class CoursesService {
     if (dto.description !== undefined) payload.description = dto.description;
     if (dto.published !== undefined) payload.published = dto.published;
     if (dto.thumbnailUrl !== undefined) payload.thumbnail_url = dto.thumbnailUrl || null;
+    if (dto.outcomes !== undefined) payload.outcomes = dto.outcomes;
     const { data, error } = await supabase
       .from('courses')
       .update(payload)

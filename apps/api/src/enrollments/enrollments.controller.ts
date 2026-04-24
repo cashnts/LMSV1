@@ -1,14 +1,19 @@
 import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseService } from '../supabase/supabase.service';
 import { EnrollDto } from './dto/enroll.dto';
 
 @Controller('enrollments')
 @UseGuards(SupabaseAuthGuard)
 export class EnrollmentsController {
+  constructor(private readonly supabaseService: SupabaseService) {}
+
   @Get('me')
   async myEnrollments(@Req() req: Request) {
-    const { data, error } = await req.supabase!
+    // Use service role to bypass RLS issues but filter by user_id
+    const serviceClient = this.supabaseService.createServiceClient();
+    const { data, error } = await serviceClient
       .from('enrollments')
       .select('*, courses (id, title, description, published, org_id)')
       .eq('user_id', req.userId!);

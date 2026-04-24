@@ -1,8 +1,7 @@
 import Link from 'next/link';
+import { Building2, ArrowRight } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 type OrgRow = {
@@ -27,46 +26,53 @@ export default async function OrganizationsPage() {
   }
 
   return (
-    <div className="w-full space-y-8">
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Organizations</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Your organizations</h1>
-        <p className="max-w-2xl text-sm leading-6 text-slate-500">
-          Open the organizations you belong to. New organization provisioning lives in the admin workspace.
+    <div className="mx-auto w-full max-w-4xl space-y-10 pt-10 pb-20">
+      <div className="space-y-3">
+        <h1 className="text-4xl font-bold tracking-tight text-slate-950 dark:text-slate-50">
+          Organizations
+        </h1>
+        <p className="text-lg text-slate-500 dark:text-slate-400">
+          Manage and access your organization workspaces.
         </p>
       </div>
 
-      <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <CardHeader>
-          <CardTitle className="text-xl">Memberships</CardTitle>
-          <CardDescription>Access level and current subscription state.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {orgs.length === 0 ? (
-            <p className="text-sm text-slate-500">No organizations yet.</p>
-          ) : (
-            orgs.map((org) => (
-              <div
-                key={org.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-900 dark:text-slate-100">{org.name}</p>
-                  <p className="text-xs text-slate-500">{org.role}</p>
+      <div className="grid gap-4">
+        {orgs.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-sm text-slate-500">No organizations found.</p>
+          </div>
+        ) : (
+          orgs.map((org) => (
+            <Link
+              key={org.id}
+              href={`/org/${org.id}`}
+              className="group flex items-center justify-between gap-6 rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
+            >
+              <div className="flex items-center gap-5">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-slate-900 dark:text-slate-400 dark:group-hover:bg-indigo-950/30">
+                  <Building2 className="size-6" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={org.subscription_status === 'active' ? 'success' : 'secondary'}>
-                    {org.subscription_status ?? 'inactive'}
-                  </Badge>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/org/${org.id}`}>Open</Link>
-                  </Button>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {org.name}
+                  </h3>
+                  <div className="mt-1 flex items-center gap-3">
+                    <span className="text-sm font-medium text-slate-500 capitalize">{org.role}</span>
+                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                    <Badge 
+                      variant={org.subscription_status === 'active' ? 'success' : 'secondary'}
+                      className="h-5 px-1.5 text-[10px]"
+                    >
+                      {org.subscription_status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              <ArrowRight className="size-5 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-indigo-500" />
+            </Link>
+          ))
+        )}
+      </div>
     </div>
   );
 }
