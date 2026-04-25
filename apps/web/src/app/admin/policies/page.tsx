@@ -1,6 +1,6 @@
 import { getAdminPageContext } from '@/lib/admin-page.server';
 import { AdminSettingsForm } from '@/components/admin/admin-settings-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,19 +9,22 @@ export default async function AdminPoliciesPage() {
   if (!adminSettings) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Policies</p>
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Global settings</h2>
-        <p className="max-w-2xl text-sm leading-6 text-slate-500">
-          Control platform-wide configuration, infrastructure, and access policies.
-        </p>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 flex items-center gap-2">
+            <Settings2 className="size-5 text-indigo-600" />
+            Platform Configuration
+          </h2>
+          <p className="text-sm font-medium text-slate-500">
+            Manage global settings, branding, and third-party integrations.
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-10">
         <AdminSettingsForm
           appName={adminSettings.creationSettings.appName}
-          organizationCreationMode={adminSettings.creationSettings.organizationCreationMode}
           courseCreationMode={adminSettings.creationSettings.courseCreationMode}
           bunnyStorageZone={adminSettings.creationSettings.bunnyStorageZone}
           bunnyStorageAccessKey={adminSettings.creationSettings.bunnyStorageAccessKey}
@@ -34,17 +37,6 @@ export default async function AdminPoliciesPage() {
           stripeSecretKey={adminSettings.creationSettings.stripeSecretKey}
           stripeWebhookSecret={adminSettings.creationSettings.stripeWebhookSecret}
         />
-        <Card className="rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <CardHeader className="px-8 pt-8 pb-4">
-            <CardTitle className="text-xl font-bold">Policy notes</CardTitle>
-            <CardDescription>How these rules affect the product.</CardDescription>
-          </CardHeader>
-          <CardContent className="px-8 pb-8 space-y-3 text-sm leading-6 text-slate-500">
-            <p>Organization creation determines whether setup is centralized or self-serve.</p>
-            <p>Course creation controls whether catalog management stays with admins or can be handled by organization staff.</p>
-            <p>Infrastructure settings (Bunny, Stripe) enable key features like video hosting and payments.</p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input';
 
 type CourseCatalogRow = {
   id: string;
-  org_id: string;
+  instructor_id: string;
   title: string;
   description: string | null;
   published: boolean;
   thumbnail_url: string | null;
   created_at: string;
-  organizations: { name: string } | null;
 };
 
 export const dynamic = 'force-dynamic';
@@ -97,10 +96,6 @@ export default async function CourseCatalogPage() {
                 <div className="flex flex-1 flex-col p-8">
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:bg-slate-900">
-                        <Building2 className="size-3" />
-                        {course.organizations?.name || 'Academy'}
-                      </div>
                       <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:bg-slate-900">
                         <Clock className="size-3" />
                         {new Date(course.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}

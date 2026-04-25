@@ -15,7 +15,7 @@ export class EnrollmentsController {
     const serviceClient = this.supabaseService.createServiceClient();
     const { data, error } = await serviceClient
       .from('enrollments')
-      .select('*, courses (id, title, description, published, org_id)')
+      .select('*, courses (id, title, description, published, instructor_id)')
       .eq('user_id', req.userId!);
     if (error) throw new Error(error.message);
     return data;
@@ -25,7 +25,7 @@ export class EnrollmentsController {
   async enroll(@Req() req: Request, @Body() body: EnrollDto) {
     const { data: course, error: ce } = await req
       .supabase!.from('courses')
-      .select('id, org_id, published')
+      .select('id, published')
       .eq('id', body.courseId)
       .single();
     if (ce || !course) throw new BadRequestException('Course not found');
@@ -36,7 +36,6 @@ export class EnrollmentsController {
         {
           user_id: req.userId!,
           course_id: course.id,
-          org_id: course.org_id,
         },
         { onConflict: 'user_id,course_id', ignoreDuplicates: false },
       )

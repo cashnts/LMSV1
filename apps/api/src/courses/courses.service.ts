@@ -11,19 +11,24 @@ export class CoursesService {
   async listPublished(supabase: SupabaseClient) {
     const { data, error } = await supabase
       .from('courses')
-      .select('id, org_id, title, description, published, thumbnail_url, created_at, organizations (name)')
+      .select('id, instructor_id, title, description, published, thumbnail_url, created_at')
       .eq('published', true)
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return data;
   }
 
-  async list(supabase: SupabaseClient, orgId: string) {
-    const { data, error } = await supabase
+  async list(supabase: SupabaseClient, instructorId?: string) {
+    let query = supabase
       .from('courses')
       .select('*')
-      .eq('org_id', orgId)
       .order('created_at', { ascending: false });
+    
+    if (instructorId) {
+      query = query.eq('instructor_id', instructorId);
+    }
+    
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
   }
@@ -49,11 +54,11 @@ export class CoursesService {
     return { ...data, enrollment_count: count ?? 0 };
   }
 
-  async create(supabase: SupabaseClient, dto: CreateCourseDto) {
+  async create(supabase: SupabaseClient, dto: CreateCourseDto, instructorId: string) {
     const { data, error } = await supabase
       .from('courses')
       .insert({
-        org_id: dto.orgId,
+        instructor_id: instructorId,
         title: dto.title,
         description: dto.description ?? '',
         published: dto.published ?? false,

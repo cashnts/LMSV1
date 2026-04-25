@@ -4,18 +4,10 @@ import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.s
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-type OrgRow = {
-  id: string;
-  name: string;
-  subscription_status: string | null;
-  created_at: string;
-  role: string;
-};
-
 type EnrollmentRow = {
   course_id: string;
   enrolled_at: string;
-  courses: { id: string; title: string; description: string | null; published: boolean; org_id: string } | null;
+  courses: { id: string; title: string; description: string | null; published: boolean } | null;
 };
 
 type CourseRow = {
@@ -23,7 +15,6 @@ type CourseRow = {
   title: string;
   description: string | null;
   published: boolean;
-  org_id: string;
 };
 
 type CertificateRow = {
@@ -39,16 +30,10 @@ export default async function DashboardPage() {
   const accessToken = await getSupabaseAccessTokenFromSession();
   if (!accessToken) return null;
 
-  let orgs: OrgRow[] = [];
   let enrollments: EnrollmentRow[] = [];
   let certificates: CertificateRow[] = [];
+  let availableCourses: CourseRow[] = [];
   
-  try {
-    orgs = await apiFetch<OrgRow[]>('/organization', accessToken);
-  } catch {
-    orgs = [];
-  }
-
   try {
     enrollments = await apiFetch<EnrollmentRow[]>('/enrollments/me', accessToken);
   } catch {
@@ -61,21 +46,14 @@ export default async function DashboardPage() {
     certificates = [];
   }
 
-  const coursesByOrg = await Promise.all(
-    orgs.map(async (org) => {
-      try {
-        const courses = await apiFetch<CourseRow[]>(`/courses?orgId=${encodeURIComponent(org.id)}`, accessToken);
-        return courses.map((course) => ({ ...course, orgName: org.name }));
-      } catch {
-        return [] as Array<CourseRow & { orgName: string }>;
-      }
-    }),
-  );
-
-  const availableCourses = coursesByOrg
-    .flat()
-    .filter((course) => course.published)
-    .filter((course) => !enrollments.some((enrollment) => enrollment.course_id === course.id));
+  try {
+    const discover = await apiFetch<CourseRow[]>('/courses/discover', accessToken);
+    availableCourses = (discover ?? []).filter(
+      (course) => !enrollments.some((enrollment) => enrollment.course_id === course.id)
+    );
+  } catch {
+    availableCourses = [];
+  }
 
   return (
     <div className="w-full space-y-8">
@@ -87,11 +65,10 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <StatCard label="Organizations" value={orgs.length} hint="Workspaces you belong to" />
+      <div className="grid gap-3 md:grid-cols-3">
         <StatCard label="Enrolled" value={enrollments.length} hint="Courses already joined" />
         <StatCard label="Certificates" value={certificates.length} hint="Earned certificates" />
-        <StatCard label="Active orgs" value={orgs.filter((org) => org.subscription_status === 'active').length} hint="Organizations with active status" />
+        <StatCard label="Available" value={availableCourses.length} hint="Courses you can join" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -161,7 +138,7 @@ export default async function DashboardPage() {
       <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <CardHeader>
           <CardTitle className="text-xl">Available courses</CardTitle>
-          <CardDescription>Published courses from your organizations.</CardDescription>
+          <CardDescription>Expand your knowledge with these courses.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {availableCourses.length === 0 ? (
@@ -174,7 +151,6 @@ export default async function DashboardPage() {
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900 dark:text-slate-100">{course.title}</p>
-                  <p className="text-xs text-slate-500">{course.orgName}</p>
                 </div>
                 <Button asChild size="sm" variant="outline">
                   <Link href={`/learn/${course.id}`}>Enroll</Link>

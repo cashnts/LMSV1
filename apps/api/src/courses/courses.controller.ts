@@ -34,9 +34,8 @@ export class CoursesController {
   }
 
   @Get()
-  list(@Req() req: Request, @Query('orgId') orgId: string) {
-    if (!orgId) throw new BadRequestException('orgId query required');
-    return this.courses.list(req.supabase!, orgId);
+  list(@Req() req: Request, @Query('instructorId') instructorId?: string) {
+    return this.courses.list(req.supabase!, instructorId);
   }
 
   @Get(':id')
@@ -47,7 +46,11 @@ export class CoursesController {
   @Post()
   async create(@Req() req: Request, @Body() dto: CreateCourseDto) {
     const access = await this.adminService.getCourseCreationAccess(req.userId, req.userEmail);
-    return this.courses.create(access.useServiceRole ? this.supabaseService.createServiceClient() : req.supabase!, dto);
+    return this.courses.create(
+      access.useServiceRole ? this.supabaseService.createServiceClient() : req.supabase!,
+      dto,
+      req.userId!,
+    );
   }
 
   @Patch(':id')

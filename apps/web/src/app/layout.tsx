@@ -28,35 +28,41 @@ export default async function RootLayout({
   const user = await currentUser();
   const accessToken = user ? await getSupabaseAccessTokenFromSession() : null;
   let isAppAdmin = false;
+  let userRole: 'admin' | 'instructor' | 'student' = 'student';
   let needsAdminSetup = false;
   let appName = 'LMS';
+  let brandColor = '#4f46e5';
+  let headScripts = '';
 
   const supabase = createClient(await cookies());
-  const { data } = await supabase.from('app_config').select('app_name').eq('id', true).maybeSingle();
-  if (data?.app_name) {
-    appName = data.app_name;
-  }
+  const { data: config } = await supabase.from('app_config').select('*').eq('id', true).maybeSingle();
+  if (config?.app_name) appName = config.app_name;
+  if (config?.brand_color) brandColor = config.brand_color;
+  if (config?.custom_head_scripts) headScripts = config.custom_head_scripts;
 
   if (accessToken) {
     try {
       const adminSettings = await apiFetch<AdminSettingsResponse>('/admin/settings', accessToken);
       isAppAdmin = adminSettings.isAppAdmin;
+      userRole = adminSettings.userRole;
       needsAdminSetup = adminSettings.setup.canBootstrapInitialAdmin;
-      if (adminSettings.creationSettings?.appName) {
-        appName = adminSettings.creationSettings.appName;
-      }
     } catch {
       isAppAdmin = false;
+      userRole = 'student';
       needsAdminSetup = false;
     }
   }
 
   return (
     <html lang="en">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: `:root { --brand-primary: ${brandColor}; }` }} />
+        {headScripts && <script dangerouslySetInnerHTML={{ __html: headScripts }} />}
+      </head>
       <body className="min-h-screen antialiased">
         <ClerkProvider signInUrl="/login" signUpUrl="/sign-up">
           <div className="min-h-screen flex flex-col">
-            <SiteHeader appName={appName} isAppAdmin={isAppAdmin} needsAdminSetup={needsAdminSetup} />
+            <SiteHeader appName={appName} isAppAdmin={isAppAdmin} userRole={userRole} needsAdminSetup={needsAdminSetup} />
             <div className="flex-1">{children}</div>
           </div>
         </ClerkProvider>

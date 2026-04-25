@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { verifyToken } from '@clerk/backend';
@@ -49,6 +50,39 @@ export class SupabaseAuthGuard implements CanActivate {
 
     if (!payload?.sub) {
       throw new UnauthorizedException('Invalid session');
+    }
+
+    // Check if user is suspended or needs info sync
+    const serviceClient = this.supabaseService.createServiceClient();
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('suspended_at, email, username')
+      .eq('id', payload.sub)
+      .maybeSingle();
+
+    if (profile?.suspended_at) {
+      throw new ForbiddenException('Your account has been suspended.');
+    }
+
+    // Auto-sync profile if it doesn't exist or is missing email/username
+    if (!profile || !profile.email) {
+      const firstName = typeof payload.first_name === 'string' ? payload.first_name : '';
+      const lastName = typeof payload.last_name === 'string' ? payload.last_name : '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      const avatarUrl = typeof payload.image_url === 'string' ? payload.image_url : 
+                        typeof payload.profile_image_url === 'string' ? payload.profile_image_url : null;
+      const username = typeof payload.username === 'string' ? payload.username : null;
+      const email = typeof payload.email === 'string' ? payload.email : 
+                    typeof payload.email_address === 'string' ? payload.email_address : null;
+
+      await serviceClient.from('profiles').upsert({
+        id: payload.sub,
+        email,
+        username,
+        full_name: fullName || null,
+        avatar_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
     }
 
     req.accessToken = accessToken;

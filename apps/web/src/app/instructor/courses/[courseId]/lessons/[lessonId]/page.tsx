@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ChevronLeft, FileText, Globe, PlayCircle, Sparkles, FolderOpen, UploadCloud } from 'lucide-react';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
 import { apiFetch } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LessonEditorForm } from '@/components/lessons/lesson-editor-form';
 import { LessonAssetUpload } from '@/components/lessons/lesson-asset-upload';
 import { LessonAssetsGallery, type LessonAsset } from '@/components/lessons/lesson-assets-gallery';
@@ -17,12 +17,12 @@ type Lesson = {
   course_id: string;
 };
 
-export default async function LessonPage({
+export default async function LessonEditorPage({
   params,
 }: {
-  params: Promise<{ orgId: string; courseId: string; lessonId: string }>;
+  params: Promise<{ courseId: string; lessonId: string }>;
 }) {
-  const { orgId, courseId, lessonId } = await params;
+  const { courseId, lessonId } = await params;
   const accessToken = await getSupabaseAccessTokenFromSession();
   if (!accessToken) return null;
 
@@ -40,7 +40,7 @@ export default async function LessonPage({
       <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
         <p className="text-slate-500">Lesson not found or access denied.</p>
         <Button asChild variant="outline">
-          <Link href={`/org/${orgId}/courses/${courseId}`}>Back to course</Link>
+          <Link href={`/instructor/courses/${courseId}`}>Back to course</Link>
         </Button>
       </div>
     );
@@ -51,7 +51,7 @@ export default async function LessonPage({
       {/* Compact Header */}
       <div className="space-y-3">
         <nav className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
-          <Link href={`/org/${orgId}/courses/${courseId}`} className="hover:text-slate-900 transition-colors">
+          <Link href={`/instructor/courses/${courseId}`} className="hover:text-slate-900 transition-colors">
             Back to course
           </Link>
           <span className="text-slate-300">/</span>
@@ -78,7 +78,6 @@ export default async function LessonPage({
       </div>
 
       <main className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Card 1: Content Editor */}
         <Card className="rounded-[1.5rem] border-slate-200 shadow-sm dark:border-slate-800">
           <CardHeader className="border-b border-slate-50 dark:border-slate-800 px-6 py-4">
             <div className="flex items-center gap-2">
@@ -91,7 +90,6 @@ export default async function LessonPage({
           </CardContent>
         </Card>
 
-        {/* Card 2: Uploader */}
         <Card className="rounded-[1.5rem] border-slate-200 shadow-sm dark:border-slate-800">
           <CardHeader className="border-b border-slate-50 dark:border-slate-800 px-6 py-4">
             <div className="flex items-center gap-2">
@@ -106,7 +104,6 @@ export default async function LessonPage({
           </CardContent>
         </Card>
 
-        {/* Card 3: Asset Library */}
         <Card className="rounded-[1.5rem] border-slate-200 shadow-sm dark:border-slate-800 overflow-hidden">
           <CardHeader className="border-b border-slate-50 dark:border-slate-800 px-6 py-4 bg-slate-50/30">
             <div className="flex items-center gap-2">
@@ -119,7 +116,6 @@ export default async function LessonPage({
           </CardContent>
         </Card>
 
-        {/* Card 4: Video Link */}
         <Card className="rounded-[1.5rem] border-slate-200 shadow-sm dark:border-slate-800">
           <CardHeader className="border-b border-slate-50 dark:border-slate-800 px-6 py-4">
             <div className="flex items-center gap-2">

@@ -1,9 +1,6 @@
-import { IsBoolean, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateCourseDto {
-  @IsUUID()
-  orgId!: string;
-
   @IsString()
   @MinLength(1)
   @MaxLength(200)

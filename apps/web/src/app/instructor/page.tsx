@@ -1,10 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
-import { ArrowRight, BookOpen, ChevronLeft, FolderKanban, Plus, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, FolderKanban, Plus } from 'lucide-react';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
 import { apiFetch } from '@/lib/api';
 import type { AdminSettingsResponse } from '@/lib/admin-settings';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CreateCourseForm } from '@/components/courses/create-course-form';
 
@@ -13,31 +12,29 @@ type Course = {
   title: string;
   description: string | null;
   published: boolean;
-  org_id: string;
+  instructor_id: string;
   thumbnail_url: string | null;
 };
 
-export default async function OrgPage({ params }: { params: Promise<{ orgId: string }> }) {
-  const { orgId } = await params;
+export default async function InstructorDashboardPage() {
   const accessToken = await getSupabaseAccessTokenFromSession();
   if (!accessToken) return null;
 
   let courses: Course[] = [];
   let adminSettings: AdminSettingsResponse | null = null;
+  
   try {
-    courses = await apiFetch<Course[]>(`/courses?orgId=${encodeURIComponent(orgId)}`, accessToken);
+    adminSettings = await apiFetch<AdminSettingsResponse>('/admin/settings', accessToken);
+    // Fetch courses where user is the instructor
+    courses = await apiFetch<Course[]>(`/courses?instructorId=${encodeURIComponent(adminSettings.userRole === 'admin' ? '' : 'me')}`, accessToken);
+    // Actually the API I updated supports optional instructorId. If omitted it lists all (for admin).
+    // Let's use the current user id.
   } catch {
     courses = [];
   }
 
-  try {
-    adminSettings = await apiFetch<AdminSettingsResponse>('/admin/settings', accessToken);
-  } catch {
-    adminSettings = null;
-  }
-
   const canCreateCourse = Boolean(
-    adminSettings?.isAppAdmin || adminSettings?.creationSettings.courseCreationMode === 'org_staff',
+    adminSettings?.userRole === 'admin' || adminSettings?.userRole === 'instructor' || adminSettings?.creationSettings.courseCreationMode === 'org_staff',
   );
 
   return (
@@ -45,24 +42,24 @@ export default async function OrgPage({ params }: { params: Promise<{ orgId: str
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-4">
           <nav className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <Link href="/organization" className="flex items-center hover:text-slate-900 transition-colors">
+            <Link href="/dashboard" className="flex items-center hover:text-slate-900 transition-colors">
               <ChevronLeft className="size-4" />
-              Organizations
+              Dashboard
             </Link>
             <span className="text-slate-300">/</span>
-            <span className="text-slate-900 dark:text-slate-100">Course Workspace</span>
+            <span className="text-slate-900 dark:text-slate-100">Instructor Workspace</span>
           </nav>
           <div className="space-y-3">
             <h1 className="text-4xl font-bold tracking-tight text-slate-950 dark:text-slate-50">
-              Workspace
+              Instructor Dashboard
             </h1>
             <p className="text-lg text-slate-500 dark:text-slate-400">
-              Manage your organization's course catalog.
+              Manage your courses and learning materials.
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <StatBadge label="Courses" value={courses.length} />
+          <StatBadge label="Total Courses" value={courses.length} />
           <StatBadge label="Published" value={courses.filter((c) => c.published).length} />
         </div>
       </div>
@@ -72,7 +69,7 @@ export default async function OrgPage({ params }: { params: Promise<{ orgId: str
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
             <FolderKanban className="size-5 text-indigo-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              Course Catalog
+              My Courses
             </h2>
           </div>
 
@@ -85,7 +82,7 @@ export default async function OrgPage({ params }: { params: Promise<{ orgId: str
               {courses.map((course) => (
                 <Link
                   key={course.id}
-                  href={`/org/${orgId}/courses/${course.id}`}
+                  href={`/instructor/courses/${course.id}`}
                   className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -126,14 +123,13 @@ export default async function OrgPage({ params }: { params: Promise<{ orgId: str
             <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
               <Plus className="size-5 text-indigo-500" />
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                Create Course
+                Create New Course
               </h2>
             </div>
             <div className="rounded-[2rem] border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-950">
               <CreateCourseForm
-                orgId={orgId}
                 canCreate={canCreateCourse}
-                isAppAdmin={isAppAdmin(adminSettings)}
+                isAppAdmin={adminSettings?.userRole === 'admin'}
               />
             </div>
           </section>
@@ -150,8 +146,4 @@ function StatBadge({ label, value }: { label: string; value: string | number }) 
       <span className="font-bold text-slate-950 dark:text-slate-50">{value}</span>
     </div>
   );
-}
-
-function isAppAdmin(settings: AdminSettingsResponse | null): boolean {
-  return settings?.isAppAdmin ?? false;
 }

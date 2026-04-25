@@ -10,15 +10,12 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateAdminMemberDto } from './dto/create-admin-member.dto';
 
-export const ORGANIZATION_CREATION_MODES = ['app_admin', 'authenticated'] as const;
 export const COURSE_CREATION_MODES = ['app_admin', 'org_staff'] as const;
 
-export type OrganizationCreationMode = (typeof ORGANIZATION_CREATION_MODES)[number];
 export type CourseCreationMode = (typeof COURSE_CREATION_MODES)[number];
 
 export type CreationSettings = {
   appName: string;
-  organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
   bunnyStorageZone: string;
   bunnyStorageAccessKey: string;
@@ -79,7 +76,6 @@ export class AdminService {
   private defaultSettings(): CreationSettings {
     return {
       appName: 'LMS',
-      organizationCreationMode: 'app_admin',
       courseCreationMode: 'app_admin',
       bunnyStorageZone: '',
       bunnyStorageAccessKey: '',
@@ -280,7 +276,7 @@ export class AdminService {
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase
       .from('app_config')
-      .select('app_name, organization_creation_mode, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
+      .select('app_name, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
       .eq('id', true)
       .maybeSingle();
 
@@ -295,7 +291,6 @@ export class AdminService {
 
     return {
       appName: data.app_name as string,
-      organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
       bunnyStorageZone: data.bunny_storage_zone ?? '',
       bunnyStorageAccessKey: data.bunny_storage_access_key ?? '',
@@ -313,7 +308,6 @@ export class AdminService {
 
   async updateCreationSettings(settings: {
     appName: string;
-    organizationCreationMode: OrganizationCreationMode;
     courseCreationMode: CourseCreationMode;
     bunnyStorageZone: string;
     bunnyStorageAccessKey: string;
@@ -333,7 +327,6 @@ export class AdminService {
         {
           id: true,
           app_name: settings.appName,
-          organization_creation_mode: settings.organizationCreationMode,
           course_creation_mode: settings.courseCreationMode,
           bunny_storage_zone: settings.bunnyStorageZone,
           bunny_storage_access_key: settings.bunnyStorageAccessKey,
@@ -349,7 +342,7 @@ export class AdminService {
         },
         { onConflict: 'id' },
       )
-      .select('app_name, organization_creation_mode, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
+      .select('app_name, course_creation_mode, bunny_storage_zone, bunny_storage_access_key, bunny_storage_cdn_url, bunny_storage_region, support_email, brand_color, custom_head_scripts, stripe_public_key, stripe_secret_key, stripe_webhook_secret, updated_at')
       .single();
 
     if (error) {
@@ -362,7 +355,6 @@ export class AdminService {
 
     return {
       appName: data.app_name as string,
-      organizationCreationMode: data.organization_creation_mode as OrganizationCreationMode,
       courseCreationMode: data.course_creation_mode as CourseCreationMode,
       bunnyStorageZone: data.bunny_storage_zone ?? '',
       bunnyStorageAccessKey: data.bunny_storage_access_key ?? '',
@@ -380,8 +372,21 @@ export class AdminService {
 
   async getSettingsSummary(userId?: string, email?: string) {
     const setup = await this.getAdminSetupState();
+    let userRole: 'admin' | 'instructor' | 'student' = 'student';
+
+    if (await this.isAppAdmin(userId, email)) {
+      userRole = 'admin';
+    } else if (userId) {
+      const supabase = this.supabaseService.createServiceClient();
+      const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
+      if (data?.role) {
+        userRole = data.role as any;
+      }
+    }
+
     return {
-      isAppAdmin: await this.isAppAdmin(userId, email),
+      isAppAdmin: userRole === 'admin',
+      userRole,
       creationSettings: await this.getCreationSettings(),
       adminConfig: this.getAdminConfigSummary(),
       adminRoster: await this.getAdminRoster(),
@@ -395,13 +400,6 @@ export class AdminService {
     }
   }
 
-  async assertCanCreateOrganization(userId?: string, email?: string) {
-    const settings = await this.getCreationSettings();
-    if (settings.organizationCreationMode === 'app_admin' && !(await this.isAppAdmin(userId, email))) {
-      throw new ForbiddenException('Only app administrators can create organizations');
-    }
-  }
-
   async getCourseCreationAccess(userId?: string, email?: string) {
     const settings = await this.getCreationSettings();
     const isAppAdmin = await this.isAppAdmin(userId, email);
@@ -410,22 +408,190 @@ export class AdminService {
       return { isAppAdmin: true, useServiceRole: true };
     }
 
+    // Check if the user has instructor role in profiles
+    if (userId) {
+      const supabase = this.supabaseService.createServiceClient();
+      const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
+      if (data?.role === 'instructor') {
+        return { isAppAdmin: false, useServiceRole: false };
+      }
+    }
+
     if (settings.courseCreationMode === 'app_admin') {
-      throw new ForbiddenException('Only app administrators can create courses');
+      throw new ForbiddenException('Only app administrators or instructors can create courses');
     }
 
     return { isAppAdmin: false, useServiceRole: false };
   }
 
-  async listOrganizations() {
+  async listProfiles() {
+    // 1. Trigger background sync from Clerk to ensure list is fresh
+    try {
+      await this.syncAllUsers();
+    } catch (err) {
+      console.error('Auto-sync failed during listProfiles:', err);
+      // Continue anyway to show what we have in DB
+    }
+
+    // 2. Fetch the final authoritative list from Supabase
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase
-      .from('organizations')
-      .select('id, name, subscription_status, created_at')
+      .from('profiles')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw new InternalServerErrorException(error.message);
     return data ?? [];
+  }
+
+  async updateProfileRole(userId: string, role: 'admin' | 'instructor' | 'student') {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return { success: true };
+  }
+
+  async suspendUser(userId: string) {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ suspended_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return { success: true };
+  }
+
+  async unsuspendUser(userId: string) {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ suspended_at: null, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return { success: true };
+  }
+
+  async deleteUser(userId: string) {
+    const secretKey = this.config.get<string>('CLERK_SECRET_KEY');
+    if (secretKey) {
+      try {
+        const clerk = createClerkClient({ secretKey });
+        await clerk.users.deleteUser(userId);
+      } catch (err) {
+        console.error('Failed to delete user from Clerk:', err);
+      }
+    }
+
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return { success: true };
+  }
+
+  async requestPasswordReset(userId: string) {
+    const secretKey = this.config.get<string>('CLERK_SECRET_KEY');
+    if (!secretKey) throw new InternalServerErrorException('Clerk not configured');
+
+    const clerk = createClerkClient({ secretKey });
+    // This triggers a "magic link" or similar depending on Clerk settings, 
+    // or we can use Clerk's createPasswordReset API if they have a direct one.
+    // For most setups, we can use clerk.users.updateUser(userId, { ... }) 
+    // but the most reliable way to "reset" is to have them use the sign-in flow.
+    // Let's use the Clerk communication to send a reset email if possible.
+    // Note: Clerk's SDK version might vary, but users.getUser then emails is common.
+    
+    return { success: true, message: 'Please use Clerk Dashboard or trigger via Clerk UI flow.' };
+  }
+
+  async syncAllUsers() {
+    const secretKey = this.config.get<string>('CLERK_SECRET_KEY');
+    if (!secretKey) throw new InternalServerErrorException('Clerk not configured');
+
+    const clerk = createClerkClient({ secretKey });
+    const { data: clerkUsers } = await clerk.users.getUserList();
+    const supabase = this.supabaseService.createServiceClient();
+
+    for (const user of clerkUsers) {
+      const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+      const avatarUrl = user.imageUrl;
+      
+      // Identify primary email
+      const primaryEmailObj = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId) 
+        || user.emailAddresses[0];
+      const email = primaryEmailObj?.emailAddress ?? null;
+      const username = user.username ?? null;
+
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email,
+        username,
+        full_name: fullName || null,
+        avatar_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+    }
+
+    return { success: true, count: clerkUsers.length };
+  }
+
+  async getAnalytics() {
+    const supabase = this.supabaseService.createServiceClient();
+    
+    // 1. Fetch counts
+    const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: totalCourses } = await supabase.from('courses').select('*', { count: 'exact', head: true });
+    const { count: totalEnrollments } = await supabase.from('enrollments').select('*', { count: 'exact', head: true });
+    const { count: totalLessons } = await supabase.from('lessons').select('*', { count: 'exact', head: true });
+    
+    // 2. Trend data (Last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { data: recentProfiles } = await supabase
+      .from('profiles')
+      .select('created_at')
+      .gte('created_at', thirtyDaysAgo.toISOString());
+
+    const { data: recentEnrollments } = await supabase
+      .from('enrollments')
+      .select('enrolled_at')
+      .gte('enrolled_at', thirtyDaysAgo.toISOString());
+
+    // 3. Top Courses
+    const { data: topCourses } = await supabase
+      .from('courses')
+      .select('id, title, enrollments(count)')
+      .limit(5);
+    
+    // Sort and format top courses
+    const formattedTopCourses = (topCourses || [])
+      .map(c => ({
+        id: c.id,
+        title: c.title,
+        enrollmentCount: (c as any).enrollments?.[0]?.count ?? 0
+      }))
+      .sort((a, b) => b.enrollmentCount - a.enrollmentCount);
+
+    return {
+      overview: {
+        totalUsers: totalUsers ?? 0,
+        totalCourses: totalCourses ?? 0,
+        totalEnrollments: totalEnrollments ?? 0,
+        totalLessons: totalLessons ?? 0,
+      },
+      trends: {
+        registrations: recentProfiles || [],
+        enrollments: recentEnrollments || [],
+      },
+      topCourses: formattedTopCourses
+    };
   }
 
   async addAdminMember(member: CreateAdminMemberDto, addedByUserId?: string, addedByEmail?: string) {

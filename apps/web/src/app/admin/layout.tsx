@@ -14,65 +14,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!adminSettings) {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <div className="w-full space-y-6">
-          <HeaderBlock
-            eyebrow="Admin"
-            title="Admin workspace unavailable"
-            description="The admin API did not return a usable settings payload. Check the backend and apply the latest migrations."
-          />
-          <AdminAccessCard
-            title="Admin data unavailable"
-            description="The workspace could not load admin state. Check the API, Supabase connection, and latest migration."
-            details={adminSettingsError ?? undefined}
-          />
-        </div>
-      </main>
-    );
-  }
-
-  if (!adminSettings.setup.adminStorageReady) {
-    return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <div className="w-full space-y-6">
-          <HeaderBlock
-            eyebrow="Admin"
-            title="Admin storage is not ready"
-            description="Admin validation depends on the persisted admin roster table. The workspace cannot validate or manage admins until that storage is available."
-          />
-          <AdminAccessCard
-            title="Apply admin storage migration"
-            description="The admin roster table is missing or unavailable, so admin bootstrap and admin management are disabled."
-            details={adminSettings.setup.adminStorageMessage ?? undefined}
-          />
-        </div>
+      <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 text-center">
+        <HeaderBlock eyebrow="System" title="Admin access unavailable" description="Please check your backend connection." />
+        <AdminAccessCard title="Connectivity Error" details={adminSettingsError ?? undefined} />
       </main>
     );
   }
 
   if (adminSettings.setup.canBootstrapInitialAdmin) {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <div className="w-full space-y-6">
-          <HeaderBlock
-            eyebrow="Setup"
-            title="Initialize the admin workspace"
-            description="No administrator exists yet. Claim the first admin account, then manage the roster and policies from here."
-          />
-          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-            <InitialAdminClaimCard />
-            <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-              <CardHeader>
-                <CardTitle className="text-xl">After setup</CardTitle>
-                <CardDescription>The first claim establishes the initial managed admin.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm leading-6 text-slate-500">
-                <p>You will gain access to the full admin workspace immediately.</p>
-                <p>You can add more admins by email or Clerk user ID from the access section.</p>
-                <p>Course creation lives inside each organization workspace, not the global admin section.</p>
-              </CardContent>
-            </Card>
-          </div>
+      <main className="mx-auto flex w-full max-w-4xl flex-1 px-4 py-12 sm:px-6">
+        <div className="w-full space-y-8 text-center">
+          <HeaderBlock eyebrow="Setup" title="Welcome to your LMS" description="Claim the initial administrator account." />
+          <InitialAdminClaimCard />
         </div>
       </main>
     );
@@ -80,69 +34,59 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!adminSettings.isAppAdmin) {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <div className="w-full space-y-6">
-          <HeaderBlock
-            eyebrow="Admin"
-            title="Insufficient permission"
-            description="This account is signed in, but it is not part of the current admin roster."
-          />
-          <AdminAccessCard
-            title="Insufficient permission"
-            description="Ask an existing administrator to add your email or Clerk user ID from the admin roster."
-            details={`Signed in as ${user.primaryEmailAddress?.emailAddress ?? user.id}`}
-          />
-        </div>
+      <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 text-center">
+        <HeaderBlock eyebrow="Restricted" title="Permission Denied" description="Administrative privileges required." />
+        <Button asChild variant="outline" className="mt-8">
+          <Link href="/dashboard">Return to Dashboard</Link>
+        </Button>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 pt-10 pb-20 sm:px-6">
-      <div className="grid w-full gap-10 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="space-y-8">
-          <div className="space-y-4 px-2">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">System</p>
-              <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50 italic">Admin</h1>
-            </div>
-            <p className="text-xs font-medium leading-relaxed text-slate-500">Global workspace management and infrastructure control.</p>
-          </div>
-          
-          <div className="space-y-2">
-            <p className="px-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Navigation</p>
-            <AdminNav />
+    <main className="min-h-screen bg-slate-50/50 dark:bg-[#090b11]">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-10 pb-24 sm:px-6">
+        {/* Simple Header */}
+        <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-8">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 text-brand-primary">
+              Admin Panel
+            </h1>
+            <p className="text-sm font-medium text-slate-500 italic">Manage your platform workspace</p>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button asChild variant="ghost" size="sm" className="w-full justify-start rounded-xl text-slate-500 hover:text-slate-900 transition-colors">
-              <Link href="/dashboard">
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Exit Admin
-              </Link>
-            </Button>
-          </div>
-        </aside>
-        <section className="min-w-0">{children}</section>
+          <Button asChild variant="ghost" className="rounded-xl font-bold text-slate-400 hover:text-brand-primary transition-colors">
+            <Link href="/dashboard">
+              <ChevronLeft className="mr-2 size-4" />
+              Exit to App
+            </Link>
+          </Button>
+        </div>
+
+        {/* Sidebar Layout */}
+        <div className="flex flex-col lg:flex-row gap-10">
+          <aside className="lg:w-64 shrink-0">
+             <div className="sticky top-24">
+                <p className="px-4 mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Navigation</p>
+                <AdminNav />
+             </div>
+          </aside>
+
+          <section className="flex-1 min-w-0 min-h-[60vh] animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {children}
+          </section>
+        </div>
       </div>
     </main>
   );
 }
 
-function HeaderBlock({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
+function HeaderBlock({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{title}</h1>
-      <p className="max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-primary">{eyebrow}</p>
+      <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-slate-50">{title}</h1>
+      <p className="max-w-2xl mx-auto text-lg text-slate-500">{description}</p>
     </div>
   );
 }

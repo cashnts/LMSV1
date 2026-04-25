@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { ChevronLeft, ListOrdered, Settings, BookOpen, PlayCircle } from 'lucide-react';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
 import { apiFetch } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CourseSettingsForm } from '@/components/courses/course-settings-form';
 import { CreateLessonForm } from '@/components/lessons/create-lesson-form';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +22,12 @@ type Lesson = {
   sort_order: number;
 };
 
-export default async function CoursePage({
+export default async function CourseEditorPage({
   params,
 }: {
-  params: Promise<{ orgId: string; courseId: string }>;
+  params: Promise<{ courseId: string }>;
 }) {
-  const { orgId, courseId } = await params;
+  const { courseId } = await params;
   const accessToken = await getSupabaseAccessTokenFromSession();
   if (!accessToken) return null;
 
@@ -49,7 +48,7 @@ export default async function CoursePage({
       <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
         <p className="text-slate-500">Course not found or access denied.</p>
         <Button asChild variant="outline">
-          <Link href={`/org/${orgId}`}>Back to workspace</Link>
+          <Link href="/instructor">Back to workspace</Link>
         </Button>
       </div>
     );
@@ -60,7 +59,7 @@ export default async function CoursePage({
       {/* Header with Breadcrumbs */}
       <div className="space-y-4">
         <nav className="flex items-center gap-2 text-sm font-medium text-slate-500">
-          <Link href={`/org/${orgId}`} className="flex items-center hover:text-slate-900 transition-colors">
+          <Link href="/instructor" className="flex items-center hover:text-slate-900 transition-colors">
             <ChevronLeft className="size-4" />
             Back to courses
           </Link>
@@ -92,7 +91,6 @@ export default async function CoursePage({
       </div>
 
       <main className="space-y-16">
-        {/* Curriculum Section - The part the user loves */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
             <ListOrdered className="size-5 text-indigo-500" />
@@ -103,7 +101,7 @@ export default async function CoursePage({
 
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-              <CreateLessonForm courseId={courseId} orgId={orgId} />
+              <CreateLessonForm courseId={courseId} />
             </div>
             
             <div className="grid gap-3">
@@ -116,7 +114,7 @@ export default async function CoursePage({
                 lessons.map((l, index) => (
                   <Link
                     key={l.id}
-                    href={`/org/${orgId}/courses/${courseId}/lessons/${l.id}`}
+                    href={`/instructor/courses/${courseId}/lessons/${l.id}`}
                     className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-indigo-500/50 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:border-indigo-500/50"
                   >
                     <div className="flex items-center gap-5">
@@ -137,7 +135,6 @@ export default async function CoursePage({
           </div>
         </section>
 
-        {/* Settings Section - The part the user wanted to relayout */}
         <section className="space-y-6 pt-8">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
             <Settings className="size-5 text-indigo-500" />

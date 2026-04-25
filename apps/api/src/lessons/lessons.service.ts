@@ -117,20 +117,18 @@ export class LessonsService {
 
     const { data: lesson, error: le } = await supabase
       .from('lessons')
-      .select('title, course_id, courses(title, org_id, organizations(name))')
+      .select('title, course_id, courses(title)')
       .eq('id', lessonId)
       .single();
 
     if (le || !lesson) throw new NotFoundException('Lesson not found');
 
     const course = (lesson as any).courses;
-    const org = course?.organizations;
 
-    const safeOrgName = this.sanitizeName(org?.name || 'unknown-org');
     const safeCourseName = this.sanitizeName(course?.title || 'unknown-course');
     const safeFileName = dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-    const objectPath = `${safeOrgName}/${safeCourseName}/${lessonId}/${Date.now()}-${safeFileName}`;
+    const objectPath = `${safeCourseName}/${lessonId}/${Date.now()}-${safeFileName}`;
 
     if (this.bunny.isStorageConfigured()) {
       const { data: row, error } = await supabase

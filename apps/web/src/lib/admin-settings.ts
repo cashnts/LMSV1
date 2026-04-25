@@ -1,9 +1,7 @@
-export type OrganizationCreationMode = 'app_admin' | 'authenticated';
 export type CourseCreationMode = 'app_admin' | 'org_staff';
 
 export type CreationSettings = {
   appName: string;
-  organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
   bunnyStorageZone: string;
   bunnyStorageAccessKey: string;
@@ -31,6 +29,7 @@ export type AdminRosterMember = {
 
 export type AdminSettingsResponse = {
   isAppAdmin: boolean;
+  userRole: 'admin' | 'instructor' | 'student';
   creationSettings: CreationSettings;
   adminConfig: {
     hasConfiguredAdmins: boolean;

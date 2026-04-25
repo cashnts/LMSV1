@@ -4,16 +4,25 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
-import type { CourseCreationMode, OrganizationCreationMode } from '@/lib/admin-settings';
+import type { CourseCreationMode } from '@/lib/admin-settings';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { 
+  Palette, 
+  Video, 
+  CreditCard, 
+  ShieldCheck, 
+  Globe,
+  Mail,
+  Type,
+  Code
+} from 'lucide-react';
 
 type Props = {
   appName: string;
-  organizationCreationMode: OrganizationCreationMode;
   courseCreationMode: CourseCreationMode;
   bunnyStorageZone: string;
   bunnyStorageAccessKey: string;
@@ -29,7 +38,6 @@ type Props = {
 
 export function AdminSettingsForm({
   appName,
-  organizationCreationMode,
   courseCreationMode,
   bunnyStorageZone,
   bunnyStorageAccessKey,
@@ -45,12 +53,11 @@ export function AdminSettingsForm({
   const router = useRouter();
   const { getAccessToken } = useSupabaseAccessToken();
   const [appNameState, setAppNameState] = useState(appName);
-  const [orgMode, setOrgMode] = useState<OrganizationCreationMode>(organizationCreationMode);
   const [courseMode, setCourseMode] = useState<CourseCreationMode>(courseCreationMode);
   const [bunnyZone, setBunnyZone] = useState(bunnyStorageZone);
   const [bunnyKey, setBunnyKey] = useState(bunnyStorageAccessKey);
   const [bunnyCdn, setBunnyCdn] = useState(bunnyStorageCdnUrl);
-  const [bunnyRegion, setBunnyRegion] = useState(bunnyStorageRegion);
+  const [bunnyRegion] = useState(bunnyStorageRegion);
   const [supportEmailState, setSupportEmailState] = useState(supportEmail);
   const [brandColorState, setBrandColorState] = useState(brandColor);
   const [customScripts, setCustomScripts] = useState(customHeadScripts);
@@ -59,6 +66,7 @@ export function AdminSettingsForm({
   const [stripeWebhook, setStripeWebhook] = useState(stripeWebhookSecret);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -77,7 +85,6 @@ export function AdminSettingsForm({
         method: 'PATCH',
         body: JSON.stringify({
           appName: appNameState,
-          organizationCreationMode: orgMode,
           courseCreationMode: courseMode,
           bunnyStorageZone: bunnyZone,
           bunnyStorageAccessKey: bunnyKey,
@@ -91,7 +98,9 @@ export function AdminSettingsForm({
           stripeWebhookSecret: stripeWebhook,
         }),
       });
+      setIsDirty(false);
       router.refresh();
+      alert('Settings saved successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save admin settings');
     }
@@ -99,204 +108,272 @@ export function AdminSettingsForm({
     setLoading(false);
   }
 
+  const handleInputChange = (setter: (val: any) => void) => (e: any) => {
+    setter(e.target.value);
+    setIsDirty(true);
+  };
+
   return (
-    <Card className="rounded-[2rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-      <CardHeader className="px-8 pt-8 pb-4">
-        <CardTitle className="text-2xl font-bold">Global Settings</CardTitle>
-        <CardDescription>Configure application-wide parameters and infrastructure integrations.</CardDescription>
-      </CardHeader>
-      <CardContent className="p-8">
-        <form onSubmit={onSubmit} className="space-y-10">
-          {/* General Section */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">General</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="app-name">Application Name</Label>
+    <form onSubmit={onSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Branding & General */}
+        <Card className="rounded-[1.5rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <CardHeader className="border-b border-slate-50 dark:border-slate-800 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/30">
+                <Palette className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Branding & General</CardTitle>
+                <CardDescription>Visual identity and contact info.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="app-name">Platform Name</Label>
+              <div className="relative">
+                <Type className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <Input
                   id="app-name"
                   value={appNameState}
-                  onChange={(e) => setAppNameState(e.target.value)}
-                  placeholder="e.g. Acme Academy"
+                  onChange={handleInputChange(setAppNameState)}
+                  className="pl-10 h-11"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="support-email">Support Email</Label>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="support-email">Support Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <Input
                   id="support-email"
                   type="email"
                   value={supportEmailState}
-                  onChange={(e) => setSupportEmailState(e.target.value)}
-                  placeholder="support@example.com"
+                  onChange={handleInputChange(setSupportEmailState)}
+                  className="pl-10 h-11"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand-color">Brand Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="brand-color"
-                    type="color"
-                    value={brandColorState}
-                    onChange={(e) => setBrandColorState(e.target.value)}
-                    className="w-12 h-11 p-1"
-                  />
-                  <Input
-                    value={brandColorState}
-                    onChange={(e) => setBrandColorState(e.target.value)}
-                    placeholder="#4f46e5"
-                    className="flex-1"
-                  />
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* Permissions Section */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Permissions</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="org-mode">Organization Creation</Label>
-                <select
-                  id="org-mode"
-                  value={orgMode}
-                  onChange={(e) => setOrgMode(e.target.value as OrganizationCreationMode)}
-                  className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <option value="app_admin">Restricted to Admins</option>
-                  <option value="authenticated">Open to all users</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="course-mode">Course Creation</Label>
-                <select
-                  id="course-mode"
-                  value={courseMode}
-                  onChange={(e) => setCourseMode(e.target.value as CourseCreationMode)}
-                  className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <option value="app_admin">Restricted to Admins</option>
-                  <option value="org_staff">Organization Staff</option>
-                </select>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="brand-color">Brand Primary Color</Label>
+              <div className="flex gap-3">
+                <Input
+                  id="brand-color"
+                  type="color"
+                  value={brandColorState}
+                  onChange={handleInputChange(setBrandColorState)}
+                  className="w-14 h-11 p-1 rounded-xl cursor-pointer"
+                />
+                <Input
+                  value={brandColorState}
+                  onChange={handleInputChange(setBrandColorState)}
+                  className="flex-1 h-11 font-mono uppercase"
+                />
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Bunny.net Section */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Bunny.net Storage</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="bunny-zone">Storage Zone Name</Label>
-                <Input
-                  id="bunny-zone"
-                  value={bunnyZone}
-                  onChange={(e) => setBunnyZone(e.target.value)}
-                  placeholder="e.g. my-lms-assets"
-                />
+        {/* Video Infrastructure */}
+        <Card className="rounded-[1.5rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <CardHeader className="border-b border-slate-50 dark:border-slate-800 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-amber-50 p-2 text-amber-600 dark:bg-amber-950/30">
+                <Video className="size-5" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bunny-region">Storage Region</Label>
-                <select
-                  id="bunny-region"
-                  value={bunnyRegion}
-                  onChange={(e) => setBunnyRegion(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <option value="ny">New York (ny)</option>
-                  <option value="la">Los Angeles (la)</option>
-                  <option value="sg">Singapore (sg)</option>
-                  <option value="se">Stockholm (se)</option>
-                  <option value="uk">London (uk)</option>
-                  <option value="de">Frankfurt (de)</option>
-                </select>
+              <div>
+                <CardTitle className="text-lg font-bold">Video Infrastructure</CardTitle>
+                <CardDescription>Powered by Bunny.net</CardDescription>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bunny-key">Access Key (Password)</Label>
-                <Input
-                  id="bunny-key"
-                  type="password"
-                  value={bunnyKey}
-                  onChange={(e) => setBunnyKey(e.target.value)}
-                  placeholder="FTP/API Password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bunny-cdn">Pull Zone URL</Label>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="bunny-zone">Storage Zone</Label>
+              <Input
+                id="bunny-zone"
+                value={bunnyZone}
+                onChange={handleInputChange(setBunnyZone)}
+                placeholder="Zone Name"
+                className="h-11"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="bunny-key">Access Key</Label>
+              <Input
+                id="bunny-key"
+                type="password"
+                value={bunnyKey}
+                onChange={handleInputChange(setBunnyKey)}
+                placeholder="API/FTP Password"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="bunny-cdn">CDN URL (Pull Zone)</Label>
+              <div className="relative">
+                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <Input
                   id="bunny-cdn"
                   value={bunnyCdn}
-                  onChange={(e) => setBunnyCdn(e.target.value)}
-                  placeholder="https://myzone.b-cdn.net"
+                  onChange={handleInputChange(setBunnyCdn)}
+                  placeholder="https://..."
+                  className="pl-10 h-11"
                 />
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Stripe Section */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Stripe Payments</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="stripe-public">Publishable Key</Label>
-                <Input
-                  id="stripe-public"
-                  value={stripePublic}
-                  onChange={(e) => setStripePublic(e.target.value)}
-                  placeholder="pk_test_..."
-                />
+        {/* Payment Gateways */}
+        <Card className="rounded-[1.5rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <CardHeader className="border-b border-slate-50 dark:border-slate-800 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/30">
+                <CreditCard className="size-5" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="stripe-secret">Secret Key</Label>
-                <Input
-                  id="stripe-secret"
-                  type="password"
-                  value={stripeSecret}
-                  onChange={(e) => setStripeSecret(e.target.value)}
-                  placeholder="sk_test_..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stripe-webhook">Webhook Secret</Label>
-                <Input
-                  id="stripe-webhook"
-                  type="password"
-                  value={stripeWebhook}
-                  onChange={(e) => setStripeWebhook(e.target.value)}
-                  placeholder="whsec_..."
-                />
+              <div>
+                <CardTitle className="text-lg font-bold">Payment Gateway</CardTitle>
+                <CardDescription>Powered by Stripe</CardDescription>
               </div>
             </div>
-          </div>
-
-          {/* Custom Scripts Section */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Custom Scripts</h3>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="custom-scripts">Head Scripts (Analytics, etc.)</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="stripe-public">Publishable Key</Label>
+              <Input
+                id="stripe-public"
+                value={stripePublic}
+                onChange={handleInputChange(setStripePublic)}
+                placeholder="pk_test_..."
+                className="h-11 font-mono text-xs"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="stripe-secret">Secret Key</Label>
+              <Input
+                id="stripe-secret"
+                type="password"
+                value={stripeSecret}
+                onChange={handleInputChange(setStripeSecret)}
+                placeholder="sk_test_..."
+                className="h-11 font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="stripe-webhook">Webhook Signing Secret</Label>
+              <Input
+                id="stripe-webhook"
+                type="password"
+                value={stripeWebhook}
+                onChange={handleInputChange(setStripeWebhook)}
+                placeholder="whsec_..."
+                className="h-11 font-mono text-xs"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Security & Advanced */}
+        <Card className="rounded-[1.5rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <CardHeader className="border-b border-slate-50 dark:border-slate-800 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-slate-50 p-2 text-slate-600 dark:bg-slate-900">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Policy & Advanced</CardTitle>
+                <CardDescription>Access control and custom code.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400" htmlFor="course-mode">Course Creation Permission</Label>
+              <select
+                id="course-mode"
+                value={courseMode}
+                onChange={(e) => {
+                  setCourseMode(e.target.value as CourseCreationMode);
+                  setIsDirty(true);
+                }}
+                className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900"
+              >
+                <option value="app_admin">Strict (Admins Only)</option>
+                <option value="org_staff">Flexible (All Instructors)</option>
+              </select>
+              <p className="text-[10px] text-slate-400 font-medium italic">Determines who can launch new courses in the catalog.</p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2" htmlFor="custom-scripts">
+                <Code className="size-3" />
+                Custom Head Scripts
+              </Label>
               <Textarea
                 id="custom-scripts"
                 value={customScripts}
-                onChange={(e) => setCustomScripts(e.target.value)}
+                onChange={handleInputChange(setCustomScripts)}
                 placeholder="<script>...</script>"
-                className="min-h-[100px] font-mono text-xs"
+                className="min-h-[100px] font-mono text-[10px] rounded-xl bg-slate-50 dark:bg-slate-900"
               />
+              <p className="text-[10px] text-slate-400 font-medium italic">Use for Google Analytics or other third-party tracking.</p>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+      {/* Save Action Bar */}
+      {isDirty && (
+        <div className="sticky bottom-8 z-30 flex items-center justify-between gap-4 rounded-[2rem] border border-slate-200 bg-white/80 p-4 backdrop-blur-xl shadow-2xl dark:border-slate-800 dark:bg-slate-950/80 max-w-2xl mx-auto border-t-indigo-100">
+          <div className="pl-4">
             {error ? (
-              <p className="text-sm font-medium text-red-600">{error}</p>
+              <p className="text-sm font-bold text-red-600">{error}</p>
             ) : (
-              <p className="text-xs text-slate-500 italic">Settings are applied instantly across the platform.</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Unsaved changes detected</p>
             )}
-            <Button type="submit" disabled={loading} className="rounded-xl h-11 px-8 font-bold">
-              {loading ? 'Saving…' : 'Save Changes'}
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">Global settings update</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => {
+                  setAppNameState(appName);
+                  setCourseMode(courseCreationMode);
+                  setBunnyZone(bunnyStorageZone);
+                  setBunnyKey(bunnyStorageAccessKey);
+                  setBunnyCdn(bunnyStorageCdnUrl);
+                  setSupportEmailState(supportEmail);
+                  setBrandColorState(brandColor);
+                  setCustomScripts(customHeadScripts);
+                  setStripePublic(stripePublicKey);
+                  setStripeSecret(stripeSecretKey);
+                  setStripeWebhook(stripeWebhookSecret);
+                  setIsDirty(false);
+                }}
+                className="text-xs font-bold text-slate-500 rounded-xl"
+             >
+               Reset
+             </Button>
+             <Button 
+              type="submit" 
+              disabled={loading} 
+              className="rounded-2xl h-12 px-10 font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 dark:shadow-none transition-all"
+            >
+              {loading ? 'Saving…' : 'Apply Changes'}
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </form>
   );
 }

@@ -39,9 +39,60 @@ export class AdminController {
     return { success: true };
   }
 
-  @Get('organizations')
-  async organizations(@Req() req: Request) {
+  @Get('ping')
+  ping() {
+    return { pong: true };
+  }
+
+  @Post('users/sync')
+  async syncAllUsers(@Req() req: Request) {
     await this.adminService.assertAppAdmin(req.userId, req.userEmail);
-    return this.adminService.listOrganizations();
+    return this.adminService.syncAllUsers();
+  }
+
+  @Get('analytics')
+  async getAnalytics(@Req() req: Request) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.getAnalytics();
+  }
+
+  @Get('profiles')
+  async listProfiles(@Req() req: Request) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.listProfiles();
+  }
+
+  @Patch('profiles/:userId/role')
+  async updateProfileRole(
+    @Req() req: Request,
+    @Param('userId') userId: string,
+    @Body('role') role: 'admin' | 'instructor' | 'student',
+  ) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.updateProfileRole(userId, role);
+  }
+
+  @Post('profiles/:userId/suspend')
+  async suspendUser(@Req() req: Request, @Param('userId') userId: string) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.suspendUser(userId);
+  }
+
+  @Post('profiles/:userId/unsuspend')
+  async unsuspendUser(@Req() req: Request, @Param('userId') userId: string) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.unsuspendUser(userId);
+  }
+
+  @Delete('profiles/:userId')
+  async deleteUser(@Req() req: Request, @Param('userId') userId: string) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.deleteUser(userId);
+  }
+
+  @Post('profiles/:userId/password-reset')
+  async requestPasswordReset(@Req() req: Request, @Param('userId') userId: string) {
+    await this.adminService.assertAppAdmin(req.userId, req.userEmail);
+    return this.adminService.requestPasswordReset(userId);
   }
 }

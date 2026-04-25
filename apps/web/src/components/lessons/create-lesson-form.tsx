@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function CreateLessonForm({ courseId, orgId }: { courseId: string; orgId: string }) {
+export function CreateLessonForm({ courseId }: { courseId: string }) {
   const router = useRouter();
   const { getAccessToken } = useSupabaseAccessToken();
   const [title, setTitle] = useState('');
@@ -34,7 +34,7 @@ export function CreateLessonForm({ courseId, orgId }: { courseId: string; orgId:
       setTitle('');
       router.refresh();
       if (lesson?.id) {
-        router.push(`/org/${orgId}/courses/${courseId}/lessons/${lesson.id}`);
+        router.push(`/instructor/courses/${courseId}/lessons/${lesson.id}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');

@@ -13,12 +13,11 @@ import { uploadThumbnailAction } from '@/app/actions/upload-action';
 import { ImageIcon, Link as LinkIcon, Upload } from 'lucide-react';
 
 type CreateCourseFormProps = {
-  orgId: string;
   canCreate: boolean;
   isAppAdmin: boolean;
 };
 
-export function CreateCourseForm({ orgId, canCreate }: CreateCourseFormProps) {
+export function CreateCourseForm({ canCreate }: CreateCourseFormProps) {
   const router = useRouter();
   const { getAccessToken } = useSupabaseAccessToken();
   const [title, setTitle] = useState('');
@@ -68,7 +67,6 @@ export function CreateCourseForm({ orgId, canCreate }: CreateCourseFormProps) {
       await apiFetch('/courses', accessToken, {
         method: 'POST',
         body: JSON.stringify({ 
-          orgId, 
           title, 
           description, 
           published: false, 

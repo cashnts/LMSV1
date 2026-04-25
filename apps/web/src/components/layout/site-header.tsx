@@ -14,10 +14,11 @@ import { cn } from '@/lib/utils';
 type Props = {
   appName: string;
   isAppAdmin: boolean;
+  userRole: 'admin' | 'instructor' | 'student';
   needsAdminSetup: boolean;
 };
 
-export function SiteHeader({ appName, isAppAdmin, needsAdminSetup }: Props) {
+export function SiteHeader({ appName, isAppAdmin, userRole, needsAdminSetup }: Props) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -25,7 +26,7 @@ export function SiteHeader({ appName, isAppAdmin, needsAdminSetup }: Props) {
     { href: '/dashboard', label: 'Home' },
     { href: '/courses', label: 'Catalog' },
     { href: '/learn', label: 'My Learning' },
-    { href: '/organization', label: 'Organizations' },
+    ...((userRole === 'instructor' || userRole === 'admin') ? [{ href: '/instructor', label: 'Instructor' }] : []),
     ...((isAppAdmin || needsAdminSetup) ? [{ href: '/admin', label: needsAdminSetup ? 'Setup' : 'Admin' }] : []),
   ];
 
