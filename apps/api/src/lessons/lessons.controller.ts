@@ -20,6 +20,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { ReorderLessonsDto } from './dto/reorder-lessons.dto';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AddAssetUrlDto } from './dto/add-asset-url.dto';
 
@@ -84,6 +85,11 @@ export class LessonsController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateLessonDto) {
     return this.lessons.create(req.supabase!, dto);
+  }
+
+  @Post('reorder')
+  reorder(@Req() req: Request, @Body() dto: ReorderLessonsDto) {
+    return this.lessons.reorder(req.supabase!, dto);
   }
 
   @Patch(':id')

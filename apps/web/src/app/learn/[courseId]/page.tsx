@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ClaimCertificateButton } from '@/components/learn/claim-certificate-button';
 import { EnrollCourseButton } from '@/components/learn/enroll-course-button';
 import { AppShell } from '@/components/layout/app-shell';
+import { LessonContent } from '@/components/learn/lesson-content';
 
 type Course = {
   id: string;
@@ -125,9 +126,13 @@ export default async function LearnCoursePage({ params }: { params: Promise<{ co
                   {course.title}
                 </h1>
                 
-                <p className="max-w-2xl text-lg leading-relaxed text-slate-300">
-                  {course.description || 'Master this subject with our comprehensive guide designed for learners of all skill levels.'}
-                </p>
+                {course.description ? (
+                  <LessonContent content={course.description} />
+                ) : (
+                  <p className="max-w-2xl text-lg leading-relaxed text-slate-300">
+                    Master this subject with our comprehensive guide designed for learners of all skill levels.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-8 text-sm font-medium">

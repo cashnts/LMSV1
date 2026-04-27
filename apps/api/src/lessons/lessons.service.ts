@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { BunnyService } from '../bunny/bunny.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { ReorderLessonsDto } from './dto/reorder-lessons.dto';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AddAssetUrlDto } from './dto/add-asset-url.dto';
 
@@ -94,6 +95,17 @@ export class LessonsService {
     if (error) throw new Error(error.message);
     if (!data) throw new NotFoundException('Lesson not found');
     return data;
+  }
+
+  async reorder(supabase: SupabaseClient, dto: ReorderLessonsDto) {
+    for (let i = 0; i < dto.lessonIds.length; i++) {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ sort_order: i, updated_at: new Date().toISOString() })
+        .eq('id', dto.lessonIds[i]);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
   }
 
   async remove(supabase: SupabaseClient, id: string) {

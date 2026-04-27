@@ -16,7 +16,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { LessonCompleteButton } from '@/components/learn/lesson-complete-button';
 import { LessonComments } from '@/components/learn/lesson-comments';
-import { LessonMarkdown } from '@/components/learn/lesson-markdown';
+import { LessonContent } from '@/components/learn/lesson-content';
 import { LessonAssetsGallery, type LessonAsset } from '@/components/lessons/lesson-assets-gallery';
 import { VideoPlayer } from '@/components/learn/video-player';
 import { currentUser } from '@clerk/nextjs/server';
@@ -164,7 +164,7 @@ export default async function LessonViewPage({
                 </div>
                 {lesson.content_md ? (
                   <div className="prose prose-slate max-w-none dark:prose-invert">
-                    <LessonMarkdown content={lesson.content_md} />
+                    <LessonContent content={lesson.content_md} />
                   </div>
                 ) : (
                   <p className="text-base italic text-slate-500">No text materials provided for this lesson.</p>

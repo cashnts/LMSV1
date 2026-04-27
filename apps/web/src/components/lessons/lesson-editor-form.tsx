@@ -7,7 +7,7 @@ import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 export function LessonEditorForm({
   lessonId,
@@ -54,13 +54,11 @@ export function LessonEditorForm({
         <Input id="lt" value={title} onChange={(e) => setTitle(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="lm">Markdown</Label>
-        <Textarea
-          id="lm"
-          value={contentMd}
-          onChange={(e) => setContentMd(e.target.value)}
-          rows={8}
-          className="font-mono text-sm"
+        <Label>Content</Label>
+        <RichTextEditor 
+          content={contentMd} 
+          onChange={setContentMd}
+          placeholder="Enter lesson content..."
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}

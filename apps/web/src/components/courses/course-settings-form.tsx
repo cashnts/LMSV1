@@ -7,7 +7,7 @@ import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -86,8 +86,12 @@ export function CourseSettingsForm({
           <Input id="ctitle" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="cdesc">Description</Label>
-          <Textarea id="cdesc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          <Label>Description</Label>
+          <RichTextEditor 
+            content={description} 
+            onChange={setDescription}
+            placeholder="Describe your course..."
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cthumb">Thumbnail URL</Label>
@@ -101,7 +105,7 @@ export function CourseSettingsForm({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>What you'll achieve</Label>
+            <Label>What you&apos;ll achieve</Label>
             <Button type="button" variant="outline" size="sm" onClick={addOutcome} className="h-8 gap-1">
               <Plus className="size-3" />
               Add point
@@ -127,7 +131,7 @@ export function CourseSettingsForm({
               </div>
             ))}
             {outcomes.length === 0 && (
-              <p className="text-xs text-slate-500 italic">No outcomes added yet. Click "Add point" to start.</p>
+              <p className="text-xs text-slate-500 italic">No outcomes added yet. Click &quot;Add point&quot; to start.</p>
             )}
           </div>
         </div>

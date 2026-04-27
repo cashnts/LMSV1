@@ -8,7 +8,7 @@ import { useSupabaseAccessToken } from '@/lib/supabase-access-token';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { uploadThumbnailAction } from '@/app/actions/upload-action';
 import { ImageIcon, Link as LinkIcon, Upload } from 'lucide-react';
 
@@ -100,14 +100,11 @@ export function CreateCourseForm({ canCreate }: CreateCourseFormProps) {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="desc" className="text-slate-700 dark:text-slate-300">Course description</Label>
-        <Textarea 
-          id="desc" 
-          value={description} 
-          onChange={(e) => setDescription(e.target.value)} 
-          rows={3} 
+        <Label className="text-slate-700 dark:text-slate-300">Course description</Label>
+        <RichTextEditor 
+          content={description} 
+          onChange={setDescription} 
           placeholder="Briefly describe what students will learn..."
-          className="resize-none bg-white dark:bg-slate-950"
         />
       </div>
       

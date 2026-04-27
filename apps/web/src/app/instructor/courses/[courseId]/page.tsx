@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { ChevronLeft, ListOrdered, Settings, BookOpen, PlayCircle } from 'lucide-react';
+import { ChevronLeft, ListOrdered, Settings, PlayCircle } from 'lucide-react';
 import { getSupabaseAccessTokenFromSession } from '@/lib/supabase-access-token.server';
 import { apiFetch } from '@/lib/api';
 import { CourseSettingsForm } from '@/components/courses/course-settings-form';
 import { CreateLessonForm } from '@/components/lessons/create-lesson-form';
+import { LessonList } from '@/components/lessons/lesson-list';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -105,32 +106,7 @@ export default async function CourseEditorPage({
             </div>
             
             <div className="grid gap-3">
-              {lessons.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-200 py-16 text-center dark:border-slate-800 dark:bg-slate-950/40">
-                  <BookOpen className="mx-auto size-10 text-slate-300" />
-                  <p className="mt-3 text-sm text-slate-500 font-medium">Your course is empty. Start by adding your first lesson above.</p>
-                </div>
-              ) : (
-                lessons.map((l, index) => (
-                  <Link
-                    key={l.id}
-                    href={`/instructor/courses/${courseId}/lessons/${l.id}`}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-indigo-500/50 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:border-indigo-500/50"
-                  >
-                    <div className="flex items-center gap-5">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-sm font-bold text-slate-500 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-slate-900 dark:text-slate-400">
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="truncate text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          {l.title}
-                        </h4>
-                      </div>
-                    </div>
-                    <ChevronLeft className="size-4 rotate-180 text-slate-300 group-hover:text-indigo-500 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                ))
-              )}
+              <LessonList courseId={courseId} initialLessons={lessons} />
             </div>
           </div>
         </section>
